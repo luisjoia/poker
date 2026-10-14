@@ -1,10 +1,13 @@
 // Set this to your Firebase web-app settings to enable Firestore realtime sync.
-const firebaseConfig = {
-  apiKey: "REPLACE_WITH_FIREBASE_API_KEY",
-  authDomain: "REPLACE_WITH_PROJECT.firebaseapp.com",
-  projectId: "REPLACE_WITH_PROJECT_ID",
-  appId: "REPLACE_WITH_FIREBASE_APP_ID"
-};
+cconst firebaseConfig = {
+     apiKey: "AIzaSyDDbJzMv4TKCZVb2F8_3q80ZvsQTA2kkFw",
+     authDomain: "scrumpoker-c1d01.firebaseapp.com",
+     projectId: "scrumpoker-c1d01",
+     storageBucket: "scrumpoker-c1d01.firebasestorage.app",
+     messagingSenderId: "925776630633",
+     appId: "1:925776630633:web:9a58b9601edfa78c23a3f8",
+     measurementId: "G-GRLE4JYMCS"
+   };
 
 const cards = ["0", "½", "1", "2", "3", "5", "8", "13", "21", "?", "☕"];
 const numericCards = new Set(["0", "½", "1", "2", "3", "5", "8", "13", "21"]);
