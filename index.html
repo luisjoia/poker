@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Collaborative Scrum Poker for teams." />
+    <title>Estima · Scrum Poker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="shell">
+    <section id="landing-view" class="landing-view">
+        <div class="brand"><span class="brand-mark">E</span><span>estimate</span></div>
+        <div class="hero">
+            <p class="eyebrow">AGILE PLANNING, WITHOUT THE FRICTION</p>
+            <h1>Estimate together.<br /><em>Decide better.</em></h1>
+            <p class="hero-copy">Create a room for your team or join an existing one. Every room has its own real-time voting session.</p>
+        </div>
+        <div class="entry-grid">
+            <form id="create-form" class="entry-card accent-card">
+                <span class="card-index">01</span>
+                <h2>Create a room</h2>
+                <p>Start a session and share the room code with your team.</p>
+                <label for="create-name">Your name</label>
+                <input id="create-name" maxlength="32" required placeholder="E.g. Jamie Smith" autocomplete="name" />
+                <label for="room-title">Team name <span>(optional)</span></label>
+                <input id="room-title" maxlength="48" placeholder="E.g. Product" />
+                <button type="submit">Create room <span>→</span></button>
+            </form>
+            <form id="join-form" class="entry-card">
+                <span class="card-index">02</span>
+                <h2>Join a room</h2>
+                <p>Use the code shared by someone on your team.</p>
+                <label for="join-name">Your name</label>
+                <input id="join-name" maxlength="32" required placeholder="E.g. Morgan Lee" autocomplete="name" />
+                <label for="room-code">Room code</label>
+                <input id="room-code" maxlength="8" required placeholder="E.g. LIMA-7K" autocapitalize="characters" />
+                <button class="secondary-button" type="submit">Join room <span>→</span></button>
+            </form>
+        </div>
+        <p id="mode-note" class="mode-note"></p>
+    </section>
+
+    <section id="room-view" class="room-view hidden" aria-live="polite">
+        <header class="room-header">
+            <button id="leave-room" class="brand text-button" aria-label="Leave room"><span class="brand-mark">E</span><span>estimate</span></button>
+            <div class="room-meta"><span id="room-title-display">Room</span><button id="copy-code" class="code-pill" title="Copy room code"></button></div>
+            <div class="status"><span class="status-dot"></span><span id="status-label">Reak time</span></div>
+        </header>
+        <section class="round-intro">
+            <p class="eyebrow" id="round-label">RONDA 01</p>
+            <h2 id="round-heading">Choose your estimate</h2>
+            <p id="round-subtitle">Votes stay private until someone reveals the cards.</p>
+        </section>
+        <section id="participants" class="participants" aria-label="Participantes"></section>
+        <section class="table-wrap">
+            <div class="table-title"><span>Your vote</span><span id="vote-state">You have not voted yet</span></div>
+            <div id="cards" class="cards" aria-label="Cartas de estimativa"></div>
+        </section>
+        <section id="result-panel" class="result-panel hidden">
+            <div class="result-heading"><div><p class="eyebrow">ROUND RESULT</p><h3>Cards revealed</h3></div><span class="revealed-badge">Revealed</span></div>
+            <div id="stats" class="stats"></div>
+        </section>
+        <div class="room-actions">
+            <button id="reveal-button" class="secondary-button">Reveal cards</button>
+            <button id="reset-button" class="reset-button">New round <span>↻</span></button>
+        </div>
+    </section>
+</main>
+<div id="toast" class="toast" role="status"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
