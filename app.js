@@ -12,7 +12,7 @@ const firebaseConfig = {
 
 const cards = ["1", "2", "3", "5", "8", "13", "21", "?"];
 const numericCards = new Set(["1", "2", "3", "5", "8", "13", "21"]);
-const firebaseReady = !Object.values(firebaseConfig).some(value => value.startsWith("REPLACE_"));
+const firebaseReady = !Object.values(firebaseConfig).some(value => typeof value === "string" && (value.startsWith("__") || value.startsWith("REPLACE_")));
 const state = { room: null, round: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null };
 const $ = selector => document.querySelector(selector);
 
