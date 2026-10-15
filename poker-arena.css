@@ -1,0 +1,199 @@
+/* ============================================================
+   ARENA DE POKER
+   Container principal que inclui a mesa, os participantes
+   e o espaço para as cartas em leque.
+   Usa position: relative para que os elementos filhos
+   possam ser posicionados de forma absoluta dentro dela.
+   ============================================================ */
+.poker-arena {
+  position: relative;
+  min-height: calc(100vh - 200px); /* Ocupa o ecrã disponível sem scroll, menos o cabeçalho e ações */
+  max-width: 940px;
+  margin: 0 auto 28px;
+}
+
+/* A mesa circular posicionada no centro da arena */
+.poker-arena .poker-table {
+  position: absolute;
+  top: 40%; /* Um pouco acima do centro para dar espaço aos participantes em baixo */
+  left: 50%;
+  width: min(40vw, 340px); /* Tamanho responsivo, máximo 340px */
+  height: min(40vw, 340px); /* Altura igual à largura para ser circular */
+  min-height: 0;
+  margin: 0;
+  padding: 20px;
+  border-radius: 50%; /* Forma circular */
+  transform: translate(-50%, -50%); /* Centra exatamente no ponto top/left */
+}
+
+/* Grid das cartas que aparecem na mesa quando reveladas */
+.poker-arena .poker-table .cards {
+  grid-template-columns: repeat(4, minmax(32px, 1fr)); /* 4 colunas, mínimo 32px cada */
+  gap: 6px;
+  padding: 0 25px;
+}
+
+/* Texto "PICK YOUR CARD" no centro da mesa quando não há cartas */
+.poker-arena .poker-table::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  color: #f7eedb;
+  content: "PICK YOUR CARD";
+  font: 800 9px "DM Mono", monospace;
+  letter-spacing: 2px;
+  transform: translate(-50%, -50%); /* Centra o texto */
+}
+
+/* ============================================================
+   PARTICIPANTES
+   Avatares dos jogadores posicionados ao redor da mesa.
+   O container ocupa toda a arena e os participantes são
+   posicionados de forma absoluta via inline style (JS).
+   ============================================================ */
+.poker-arena .participants {
+  position: absolute;
+  inset: 0; /* Ocupa toda a arena */
+  display: block;
+  margin: 0;
+  pointer-events: none; /* O container não bloqueia cliques */
+}
+
+/* Card individual de cada participante */
+.poker-arena .poker-player {
+  position: absolute; /* Posição definida por inline style no JS */
+  width: 110px;
+  min-height: 0;
+  padding: 8px;
+  box-shadow: 0 6px 14px #1720191f;
+  pointer-events: auto; /* O card individual pode receber cliques */
+  border-radius: 8px;
+  background: var(--panel, #fffefa);
+  border: 1px solid var(--line, #d8d8cd);
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+/* Avatar circular com as iniciais do participante */
+.poker-arena .poker-player .avatar {
+  display: grid;
+  place-items: center;
+  margin: 0 auto 4px;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: #e4eadc;
+  color: var(--moss, #25523a);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Nome do participante com truncamento se for muito longo */
+.poker-arena .poker-player .participant-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Estado do participante: "Thinking…", "Voted ✓", "You" */
+.poker-arena .participant-state {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted, #687168);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* Participante que já votou — destaque verde */
+.poker-arena .poker-player.voted {
+  border-color: #a5d743;
+  background: #faffeb;
+}
+
+/* ============================================================
+   CARTAS EM LEQUE (MÃO DO JOGADOR)
+   Fixas no fundo do ecrã, dispostas em leque com rotação.
+   Só aparecem quando o jogador ainda não votou e a ronda
+   ainda não foi revelada. Ao votar, desaparecem.
+   ============================================================ */
+.player-hand {
+  position: fixed; /* Fixa no ecrã, não se move com scroll */
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%); /* Centra horizontalmente */
+  z-index: 100; /* Acima de tudo */
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0 20px 10px;
+  pointer-events: auto;
+}
+
+/* Cada carta do leque */
+.player-hand .poker-choice {
+  width: 72px;
+  height: 98px;
+  margin: 0 -14px; /* Sobreposição negativa para criar o efeito de leque */
+  transition: transform 0.2s ease, margin 0.2s ease, z-index 0s;
+  transform-origin: bottom center; /* Rotação a partir da base */
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.player-hand .poker-choice .playing-card {
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* O botão pai recebe o clique, não a carta */
+}
+
+/* Ao passar o rato, a carta sobe e fica reta */
+.player-hand .poker-choice:hover {
+  transform: translateY(-20px) rotate(0deg) !important;
+  z-index: 200 !important;
+  margin: 0 2px;
+}
+
+/* Carta selecionada (quando o jogador vota) */
+.player-hand .poker-choice.selected {
+  transform: translateY(-26px) rotate(0deg) !important;
+  z-index: 150 !important;
+  margin: 0 4px;
+}
+
+/* Animação quando uma carta é distribuída para a mesa */
+.player-card.dealt {
+  animation: deal-to-table 0.5s ease-out forwards;
+}
+
+@keyframes deal-to-table {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   RESPONSIVO — ECRÃS PEQUENOS (MOBILE)
+   Reduz a mesa, os participantes e as cartas em leque
+   para caber em ecrãs de telemóvel.
+   ============================================================ */
+@media (max-width: 700px) {
+  .poker-arena { min-height: calc(100vh - 180px); }
+  .poker-arena .poker-table {
+    width: min(60vw, 240px); /* Mesa menor no mobile */
+    height: min(60vw, 240px);
+    padding: 8px;
+    top: 38%;
+  }
+  .poker-arena .poker-table .cards { grid-template-columns: repeat(3, minmax(26px, 1fr)); padding: 0 15px; }
+  .poker-arena .poker-player { width: 70px; padding: 5px; }
+  .poker-arena .poker-player .avatar { width: 20px; height: 20px; margin-bottom: 2px; font-size: 8px; }
+  .poker-arena .poker-player .participant-name { font-size: 8px; }
+  .poker-arena .poker-player .player-card { transform: scale(.6); margin: 0 auto -6px; }
+  .player-hand .poker-choice { width: 48px; height: 65px; margin: 0 -10px; }
+}

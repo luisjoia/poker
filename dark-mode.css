@@ -1,0 +1,44 @@
+.theme-toggle {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 8px 24px #17201924;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.theme-toggle:hover { transform: translateY(-2px); }
+.theme-icon { font-size: 17px; line-height: 1; }
+
+html[data-theme="dark"] .brand-mark { background: #c7ff4d; color: #142116; }
+html[data-theme="dark"] .entry-card { background: var(--panel); }
+html[data-theme="dark"] .accent-card { background: #354c22; }
+html[data-theme="dark"] .entry-card p,
+html[data-theme="dark"] .entry-card label span { color: var(--muted); }
+html[data-theme="dark"] .entry-card input { border-color: var(--line); background: #111812; color: var(--ink); }
+html[data-theme="dark"] .entry-card button,
+html[data-theme="dark"] .room-actions button { background: var(--lime); border-color: var(--lime); color: #142116; }
+html[data-theme="dark"] .secondary-button { background: transparent !important; border-color: var(--line) !important; color: var(--ink) !important; }
+html[data-theme="dark"] .table-wrap { background: #242d25; }
+html[data-theme="dark"] .card { border-color: var(--line); background: var(--panel); color: var(--ink); }
+html[data-theme="dark"] .card.selected { background: var(--lime); border-color: var(--lime); color: #142116; box-shadow: 0 7px 0 #5f8428; }
+html[data-theme="dark"] .participant { background: var(--panel); border-color: var(--line); }
+html[data-theme="dark"] .participant.voted { border-color: #87b936; background: #263a1d; }
+html[data-theme="dark"] .avatar { background: #344137; color: var(--moss); }
+html[data-theme="dark"] .result-panel { background: #080c09; }
+html[data-theme="dark"] .stat { background: #172018; }
+html[data-theme="dark"] .toast { background: #edf4eb; color: #101511; }
+
+@media (max-width: 700px) {
+  .theme-toggle { right: 14px; bottom: 14px; }
+  .theme-label { display: none; }
+}
