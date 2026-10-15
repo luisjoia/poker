@@ -16,6 +16,9 @@ const firebaseReady = !Object.values(firebaseConfig).some(value => typeof value 
 const state = { room: null, round: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null };
 const $ = selector => document.querySelector(selector);
 
+console.log("[Firebase] Config API key:", firebaseConfig.apiKey);
+console.log("[Firebase] firebaseReady:", firebaseReady);
+
 $("#mode-note").textContent = firebaseReady
   ? "Firebase real-time sync is active."
   : "Local demo mode — open this page in another tab to test synchronization.";
@@ -23,17 +26,26 @@ $("#mode-note").textContent = firebaseReady
 let firestore;
 let firebaseApi;
 if (firebaseReady) {
-  const [{ initializeApp }, authApi, fireApi] = await Promise.all([
-    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
-    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"),
-    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js")
-  ]);
-  firebaseApi = fireApi;
-  const app = initializeApp(firebaseConfig);
-  const auth = authApi.getAuth(app);
-  await authApi.signInAnonymously(auth); // Gives each browser a safe participant identity.
-  state.uid = auth.currentUser.uid;
-  firestore = fireApi.getFirestore(app);
+  try {
+    console.log("[Firebase] Initializing Firebase modules...");
+    const [{ initializeApp }, authApi, fireApi] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js")
+    ]);
+    firebaseApi = fireApi;
+    const app = initializeApp(firebaseConfig);
+    const auth = authApi.getAuth(app);
+    console.log("[Firebase] Signing in anonymously...");
+    const userCredential = await authApi.signInAnonymously(auth);
+    state.uid = userCredential.user.uid;
+    console.log("[Firebase] Authenticated with UID:", state.uid);
+    firestore = fireApi.getFirestore(app);
+    console.log("[Firebase] Firestore initialized successfully.");
+  } catch (error) {
+    console.error("[Firebase] Failed to initialize:", error);
+    showToast("Failed to connect to Firebase. Check console for details.");
+  }
 }
 
 function newCode() {
@@ -51,10 +63,22 @@ async function createRoom(name, title) {
   const room = { code: newCode(), title: title.trim() || "New team", revealed: false, round: 1, participants: {} };
   room.participants[state.uid] = { name, vote: null };
   if (firebaseReady) {
-    const { doc, setDoc } = firebaseApi;
-    await setDoc(doc(firestore, "rooms", room.code), { title: room.title, revealed: false, round: 1 });
-    await setDoc(doc(firestore, "rooms", room.code, "participants", state.uid), room.participants[state.uid]);
-  } else saveDemoRoom(room);
+    console.log("[CreateRoom] Writing to Firestore, room code:", room.code);
+    try {
+      const { doc, setDoc } = firebaseApi;
+      await setDoc(doc(firestore, "rooms", room.code), { title: room.title, revealed: false, round: 1 });
+      console.log("[CreateRoom] Room document created successfully.");
+      await setDoc(doc(firestore, "rooms", room.code, "participants", state.uid), room.participants[state.uid]);
+      console.log("[CreateRoom] Participant document created successfully.");
+    } catch (error) {
+      console.error("[CreateRoom] Firebase error:", error);
+      showToast("Error creating room: " + error.message);
+      return;
+    }
+  } else {
+    console.log("[CreateRoom] Demo mode - saving to localStorage");
+    saveDemoRoom(room);
+  }
   enterRoom(room.code, name);
 }
 
