@@ -13,7 +13,12 @@
 <body>
 <main class="shell">
     <section id="landing-view" class="landing-view">
-        <div class="brand"><span class="brand-mark">E</span><span>estimate</span></div>
+        <div class="brand"><span class="brand-mark">E</span><span>estima</span></div>
+        <div class="hero">
+            <p class="eyebrow">POKER🧄</p>
+            <h1>Estimations are not final.<br /><em>Decide better.</em></h1>
+            <p class="hero-copy">Create a room and vote.</p>
+        </div>
         <div class="entry-grid">
             <form id="create-form" class="entry-card accent-card">
                 <span class="card-index">01</span>
@@ -21,7 +26,7 @@
                 <p>Start a session and share the room code with your team.</p>
                 <label for="create-name">Your name</label>
                 <input id="create-name" maxlength="32" required placeholder="E.g. Jamie Smith" autocomplete="name" />
-                <label for="room-title">Team name <span>(optional)</span></label>
+                <label for="room-title">Room name <span>(optional)</span></label>
                 <input id="room-title" maxlength="48" placeholder="E.g. Product" />
                 <button type="submit">Create room <span>→</span></button>
             </form>
@@ -32,7 +37,7 @@
                 <label for="join-name">Your name</label>
                 <input id="join-name" maxlength="32" required placeholder="E.g. Morgan Lee" autocomplete="name" />
                 <label for="room-code">Room code</label>
-                <input id="room-code" maxlength="8" required placeholder="E.g. LIMA-7K" autocapitalize="characters" />
+                <input id="room-code" maxlength="4" required placeholder="E.g. A7K2" autocapitalize="characters" />
                 <button class="secondary-button" type="submit">Join room <span>→</span></button>
             </form>
         </div>
@@ -41,9 +46,9 @@
 
     <section id="room-view" class="room-view hidden" aria-live="polite">
         <header class="room-header">
-            <button id="leave-room" class="brand text-button" aria-label="Leave room"><span class="brand-mark">E</span><span>estimate</span></button>
+            <button id="leave-room" class="brand text-button" aria-label="Leave room"><span class="brand-mark">E</span><span>estima</span></button>
             <div class="room-meta"><span id="room-title-display">Room</span><button id="copy-code" class="code-pill" title="Copy room code"></button></div>
-            <div class="status"><span class="status-dot"></span><span id="status-label">Reak time</span></div>
+            <div class="status"><span class="status-dot"></span><span id="status-label">Em tempo real</span></div>
         </header>
         <section class="round-intro">
             <p class="eyebrow" id="round-label">RONDA 01</p>

@@ -1,4 +1,4 @@
-// Set this to your Firebase web-app settings to enable Firestore realtime sync.
+// Firebase web app settings. Authentication and Firestore are loaded below.
 const firebaseConfig = {
   apiKey: "AIzaSyDDbJzMv4TKCZVb2F8_3q80ZvsQTA2kkFw",
   authDomain: "scrumpoker-c1d01.firebaseapp.com",
@@ -12,11 +12,11 @@ const firebaseConfig = {
 const cards = ["1", "2", "3", "5", "8", "13", "21", "?"];
 const numericCards = new Set(["1", "2", "3", "5", "8", "13", "21"]);
 const firebaseReady = !Object.values(firebaseConfig).some(value => value.startsWith("REPLACE_"));
-const state = { room: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null };
+const state = { room: null, round: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null };
 const $ = selector => document.querySelector(selector);
 
 $("#mode-note").textContent = firebaseReady
-  ? "Real-time sync is active."
+  ? "Firebase real-time sync is active."
   : "Local demo mode — open this page in another tab to test synchronization.";
 
 let firestore;
@@ -35,7 +35,11 @@ if (firebaseReady) {
   firestore = fireApi.getFirestore(app);
 }
 
-function newCode() { return `${["LIMA", "TEJO", "SOL", "NORTE", "AZUL"][Math.floor(Math.random() * 5)]}-${Math.random().toString(36).slice(2, 4).toUpperCase()}`; }
+function newCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const randomValues = crypto.getRandomValues(new Uint32Array(4));
+  return Array.from(randomValues, value => alphabet[value % alphabet.length]).join("");
+}
 function initials(name) { return name.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase(); }
 function showToast(message) { const toast = $("#toast"); toast.textContent = message; toast.classList.add("show"); setTimeout(() => toast.classList.remove("show"), 2200); }
 function roomKey(code) { return `estima-room-${code}`; }
@@ -89,11 +93,16 @@ async function enterRoom(code) {
 function render(room) {
   if (!room) return;
   state.round = room.round;
-  const people = Object.entries(room.participants || {}).map(([id, person]) => ({ id, ...person }));
-  const mine = room.participants?.[state.uid];
+  // A vote only belongs to the current round. Old votes stay in Firestore but are ignored.
+  const people = Object.entries(room.participants || {}).map(([id, person]) => ({
+    id,
+    ...person,
+    vote: person.voteRound === room.round ? person.vote : null
+  }));
+  const mine = people.find(person => person.id === state.uid);
   $("#room-title-display").textContent = room.title;
   $("#copy-code").textContent = room.code;
-  $("#round-label").textContent = `RONDA ${String(room.round).padStart(2, "0")}`;
+  $("#round-label").textContent = `ROUND ${String(room.round).padStart(2, "0")}`;
   $("#round-heading").textContent = room.revealed ? "The team has revealed the cards" : "Choose your estimate";
   $("#round-subtitle").textContent = room.revealed ? "Any participant can start a new round." : "Votes stay private until someone reveals the cards.";
   $("#vote-state").textContent = mine?.vote ? `You chose ${mine.vote}` : "You have not voted yet";
@@ -112,8 +121,15 @@ function renderStats(people) {
   $("#stats").innerHTML = [["Average", fmt(average && +average.toFixed(1))], ["Median", fmt(median)], ["Minimum", fmt(values[0] ?? null)], ["Maximum", fmt(values.at(-1) ?? null)]].map(([label, value]) => `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`).join("");
 }
 async function vote(card) {
-  if (firebaseReady) await firebaseApi.setDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid), { vote: card }, { merge: true });
-  else { const room = getDemoRoom(state.room); room.participants[state.uid].vote = card; saveDemoRoom(room); }
+  const room = firebaseReady ? null : getDemoRoom(state.room);
+  const round = room?.round ?? state.round;
+  if (firebaseReady) {
+    await firebaseApi.setDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid), { vote: card, voteRound: round }, { merge: true });
+  } else {
+    room.participants[state.uid].vote = card;
+    room.participants[state.uid].voteRound = round;
+    saveDemoRoom(room);
+  }
 }
 async function reveal() {
   if (firebaseReady) await firebaseApi.updateDoc(firebaseApi.doc(firestore, "rooms", state.room), { revealed: true });
@@ -122,10 +138,14 @@ async function reveal() {
 async function resetRound() {
   if (!confirm("Start a new round for the entire team?")) return;
   if (firebaseReady) {
-    const { collection, doc, getDocs, writeBatch, increment } = firebaseApi; const batch = writeBatch(firestore);
-    (await getDocs(collection(firestore, "rooms", state.room, "participants"))).forEach(person => batch.update(person.ref, { vote: null }));
-    batch.update(doc(firestore, "rooms", state.room), { revealed: false, round: increment(1) }); await batch.commit();
-  } else { const room = getDemoRoom(state.room); room.revealed = false; room.round += 1; Object.values(room.participants).forEach(person => person.vote = null); saveDemoRoom(room); }
+    const { doc, increment, updateDoc } = firebaseApi;
+    await updateDoc(doc(firestore, "rooms", state.room), { revealed: false, round: increment(1) });
+  } else {
+    const room = getDemoRoom(state.room);
+    room.revealed = false;
+    room.round += 1;
+    saveDemoRoom(room);
+  }
 }
 
 $("#create-form").addEventListener("submit", event => { event.preventDefault(); createRoom($("#create-name").value.trim(), $("#room-title").value); });
