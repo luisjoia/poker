@@ -1,6 +1,7 @@
 // Firebase web app settings. Authentication and Firestore are loaded below.
+// The API key placeholder is replaced by build.js during deployment.
 const firebaseConfig = {
-  apiKey: "AIzaSyDDbJzMv4TKCZVb2F8_3q80ZvsQTA2kkFw",
+  apiKey: "__FIREBASE_API_KEY__",
   authDomain: "scrumpoker-c1d01.firebaseapp.com",
   projectId: "scrumpoker-c1d01",
   storageBucket: "scrumpoker-c1d01.firebasestorage.app",
