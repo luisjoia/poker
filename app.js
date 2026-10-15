@@ -88,6 +88,7 @@ async function enterRoom(code) {
 
 function render(room) {
   if (!room) return;
+  state.round = room.round;
   const people = Object.entries(room.participants || {}).map(([id, person]) => ({ id, ...person }));
   const mine = room.participants?.[state.uid];
   $("#room-title-display").textContent = room.title;
