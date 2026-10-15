@@ -16,7 +16,7 @@ if (content.includes('__FIREBASE_API_KEY__')) {
     const fallbackKey = 'REPLACE_API_KEY';
     content = content.replace(/__FIREBASE_API_KEY__/g, fallbackKey);
   } else {
-    console.log('[Build] Replacing placeholder with API key...');
+    console.log('[Build] Replacing placeholder with API key....');
     content = content.replace(/__FIREBASE_API_KEY__/g, apiKey.trim());
   }
 } else {
