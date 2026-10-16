@@ -26,6 +26,23 @@
   --stat-bg: #223126;
   --stat-text: #c6d0c6;
   --white: #ffffff;
+  --result-bg: #1e2a3a;
+  --result-text: #c6d0c6;
+  --result-badge-bg: #ffffff1c;
+  --result-badge-text: #7eb8da;
+  --result-stat-bg: #162030;
+  --result-stat-value: #7eb8da;
+  --result-stats-gap: #ffffff0a;
+  --accent-bg: #c7ff4d;
+  --accent-text: #172019;
+  --accent-heading: #172019;
+  --accent-body: #506052;
+  --accent-index: #25523a;
+  --accent-label: #506052;
+  --accent-input-border: #a5b2a1;
+  --accent-input-bg: #ffffffad;
+  --accent-button-bg: #172019;
+  --accent-button-text: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -75,11 +92,59 @@
   --accent-button-text: #1a1d1b;
 }
 
+[data-theme="poker"] {
+  --ink: #f5f0e8;
+  --paper: #1a3a2a;
+  --panel: #234a38;
+  --lime: #d4a843;
+  --moss: #d4a843;
+  --line: #3a5a4a;
+  --muted: #a8b8a8;
+  --orange: #ff7851;
+  --shadow: #00000060;
+  --text-secondary: #a8b8a8;
+  --label-muted: #a8b8a8;
+  --input-border: #4a6a5a;
+  --input-bg: #2a5a48;
+  --input-focus-shadow: #d4a84333;
+  --status-green: #6bc676;
+  --status-green-shadow: #6bc67633;
+  --avatar-bg: #3a6a5a;
+  --voted-border: #d4a843;
+  --voted-bg: #2a4a38;
+  --table-bg: #234a38;
+  --card-border: #4a6a5a;
+  --card-selected-shadow: #d4a843;
+  --badge-bg: #d4a84333;
+  --stats-gap: #d4a84322;
+  --stat-bg: #1a3a2a;
+  --stat-text: #a8b8a8;
+  --white: #ffffff;
+  --result-bg: #1a2a3a;
+  --result-text: #f5f0e8;
+  --result-badge-bg: #d4a84333;
+  --result-badge-text: #d4a843;
+  --result-stat-bg: #152a35;
+  --result-stat-value: #d4a843;
+  --result-stats-gap: #d4a84322;
+  --accent-bg: #445d0e;
+  --accent-text: #f5f0e8;
+  --accent-heading: #f5f0e8;
+  --accent-body: #9aa098;
+  --accent-index: #d4a843;
+  --accent-label: #9aa098;
+  --accent-input-border: #3a3f3b;
+  --accent-input-bg: #1e2220;
+  --accent-button-bg: #d4a843;
+  --accent-button-text: #1a3a2a;
+}
+
 * { box-sizing:border-box; }
 body { margin:0; min-width:320px; background:var(--paper); color:var(--ink); font-family:Manrope,system-ui,sans-serif; transition: background .2s, color .2s; }
 button,input { font:inherit; }
 button { cursor:pointer; }
 .shell { width:min(1120px,calc(100% - 40px)); margin:auto; padding:28px 0 56px; }
+.shell.room-active { padding:0; }
 
 .brand{display:flex;align-items:center;gap:9px;font-size:20px;font-weight:800;letter-spacing:-1px}
 .brand-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--lime);font:16px "DM Mono",monospace}
@@ -105,7 +170,7 @@ button { cursor:pointer; }
 .mode-note{margin:20px 0 0;color:var(--muted);font-size:12px}
 .hidden{display:none!important}
 
-.room-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.room-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:5px 0 4px;border-bottom:1px solid var(--line)}
 .text-button{border:0;background:transparent;padding:0;width:max-content}
 .room-meta{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800}
 .room-code-label{color:var(--muted);font-size:12px;font-weight:600}
@@ -113,45 +178,220 @@ button { cursor:pointer; }
 .status{justify-self:end;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--status-green);box-shadow:0 0 0 3px var(--status-green-shadow)}
 
-.round-intro{text-align:center;margin:62px 0 30px}
-.round-intro h2{font-size:clamp(30px,4vw,46px);letter-spacing:-2.5px;margin:0}
-.round-intro>p:last-child{color:var(--muted);font-size:14px}
+.round-intro{text-align:center;margin:8px 0 6px}
+.round-intro h2{font-size:clamp(22px,3vw,32px);letter-spacing:-2.5px;margin:0}
+.round-intro>p:last-child{color:var(--muted);font-size:13px}
 
-.participants{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-bottom:38px}
-.participant{min-width:122px;padding:12px;border:1px solid var(--line);border-radius:5px;background:var(--panel);text-align:center}
-.avatar{display:grid;place-items:center;margin:auto auto 7px;width:29px;height:29px;border-radius:50%;background:var(--avatar-bg);color:var(--moss);font-size:11px;font-weight:800}
-.participant-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:800}
-.participant-state{display:block;margin-top:4px;color:var(--muted);font-size:10px}
-.participant.voted{border-color:var(--voted-border);background:var(--voted-bg)}
-.participant.vote-modified{border-color:var(--orange);background:var(--orange)}
-.participant .vote-value{color:var(--moss);font:700 18px "DM Mono",monospace}
-.vote-initial{color:var(--muted);text-decoration:line-through;font-size:14px;position:relative;display:inline-block}
+/* Table layout — participants around a table with votes in the center */
+.table-container{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin:0 auto;
+  padding:0 10px;
+  min-height:0;
+  flex-grow:1;
+}
+.table-surface{
+  position:relative;
+  width:min(320px, 70vw);
+  aspect-ratio: 21/8;
+  border-radius:8px;
+  background:var(--table-bg);
+  border:1px solid var(--line);
+  box-shadow:0 3px 12px var(--shadow), inset 0 1px 4px var(--shadow);
+  overflow:visible;
+}
+/* Center area where revealed votes appear */
+.table-center{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  gap:3px;
+  padding:6px;
+  max-width:55%;
+  max-height:55%;
+}
+.table-center .revealed-card{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:54px;
+  border-radius:6px;
+  background:var(--panel);
+  border:1px solid var(--card-border);
+  font:700 16px "DM Mono",monospace;
+  color:var(--moss);
+  box-shadow:0 2px 8px var(--shadow);
+  animation:dealCard 0.3s ease-out;
+}
+@keyframes dealCard {
+  from { transform:scale(0) rotate(-20deg); opacity:0; }
+  to { transform:scale(1) rotate(0deg); opacity:1; }
+}
+/* Participants positioned around the table */
+.table-participants{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+.table-participants .participant{
+  position:absolute;
+  pointer-events:auto;
+  min-width:92px;
+  max-width:130px;
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--panel);
+  text-align:center;
+  box-shadow:0 1px 3px var(--shadow);
+  transition:transform 0.2s, box-shadow 0.2s;
+}
+.table-participants .participant:hover{
+  transform:scale(1.05);
+  box-shadow:0 2px 6px var(--shadow);
+}
+.table-participants .avatar{
+  display:grid;
+  place-items:center;
+  margin:auto auto 0;
+  width:25px;
+  height:25px;
+  border-radius:50%;
+  background:var(--avatar-bg);
+  color:var(--moss);
+  font-size:11px;
+  font-weight:800;
+}
+.table-participants .participant-name{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:14px;
+  font-weight:700;
+}
+.table-participants .participant-state{
+  display:block;
+  margin-top:0;
+  color:var(--muted);
+  font-size:11px;
+}
+.table-participants .participant.voted{
+  border-color:var(--voted-border);
+  background:var(--voted-bg);
+}
+.table-participants .participant.vote-modified{
+  border-color:var(--orange);
+  background:var(--orange);
+}
+.table-participants .participant .vote-value{
+  color:var(--moss);
+  font:700 17px "DM Mono",monospace;
+}
+/* Fallback: old participants list (hidden, kept for stats) */
+.participants{display:none}
+.vote-initial{color:var(--muted);text-decoration:line-through;font-size:12px;position:relative;display:inline-block}
 .vote-new{position:relative;font-weight:700}
 
-.table-wrap{padding:22px;background:var(--table-bg);border-radius:8px}
-.table-title{display:flex;justify-content:space-between;margin-bottom:16px;font-size:13px;font-weight:800}
+/* 8 cards × 44px + 7 gaps × 3px = 379px content + 12px padding (6px each side) = 391px */
+.table-wrap{padding:6px;background:var(--table-bg);border-radius:8px;margin-top:auto;width:fit-content;margin-left:auto;margin-right:auto;max-width:391px}
+.table-title{display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px;font-weight:800}
 .table-title span:last-child{color:var(--moss);font-weight:600}
-.cards{display:grid;grid-template-columns:repeat(10,1fr);gap:10px}
-.card{aspect-ratio: .68;border:1px solid var(--card-border);border-radius:6px;background:var(--panel);color:var(--ink);font:700 clamp(16px,2vw,25px) "DM Mono",monospace;transition:.15s}
-.card:hover{transform:translateY(-5px);border-color:var(--moss)}
-.card.selected{background:var(--moss);border-color:var(--moss);color:var(--lime);transform:translateY(-5px);box-shadow:0 7px 0 var(--card-selected-shadow)}
+.cards{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;width:379px}
+.card{
+  position:relative;
+  width:44px;
+  height:60px;
+  border:2px solid var(--card-border);
+  border-radius:6px;
+  background:var(--panel);
+  color:var(--ink);
+  font:700 16px "DM Mono",monospace;
+  transition:.15s;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  box-shadow:0 1px 3px var(--shadow);
+}
+/* Corner values on playing cards */
+.card::before,
+.card::after {
+  content: attr(data-card);
+  position: absolute;
+  font-size: 7px;
+  font-weight: 700;
+  font-family: "DM Mono", monospace;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity .15s;
+}
+.card::before {
+  top: 3px;
+  left: 4px;
+}
+.card::after {
+  bottom: 3px;
+  right: 4px;
+  transform: rotate(180deg);
+}
+/* Decorative center diamond */
+.card .card-center {
+  position: relative;
+  z-index: 1;
+}
+.card:hover{transform:translateY(-5px);border-color:var(--moss);box-shadow:0 4px 12px var(--shadow)}
+.card.selected{
+  background:var(--moss);
+  border-color:var(--moss);
+  color:var(--lime);
+  transform:translateY(-5px);
+  box-shadow:0 5px 0 var(--card-selected-shadow);
+}
+.card.selected::before,
+.card.selected::after {
+  opacity: 1;
+  color: var(--lime);
+}
 
-.result-panel{margin-top:22px;padding:26px;background:var(--ink);border-radius:8px;color:var(--white)}
+.result-panel{margin-top:12px;padding:16px;background:var(--ink);border-radius:8px;color:var(--white)}
 .result-heading{display:flex;justify-content:space-between;align-items:flex-start}
 .result-heading .eyebrow{color:var(--lime)}
-.result-heading h3{margin:0;font-size:25px;letter-spacing:-1px}
+.result-heading h3{margin:0;font-size:20px;letter-spacing:-1px}
 .revealed-badge{padding:6px 9px;border-radius:99px;background:var(--badge-bg);color:var(--lime);font:10px "DM Mono",monospace}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:22px;background:var(--stats-gap)}
-.stat{padding:16px;background:var(--stat-bg)}
-.stat strong{display:block;margin-top:5px;font:700 24px "DM Mono",monospace;color:var(--lime)}
-.stat span{font-size:10px;color:var(--stat-text);text-transform:uppercase;letter-spacing:1px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:12px;background:var(--stats-gap)}
+.stat{padding:10px;background:var(--stat-bg)}
+.stat strong{display:block;margin-top:3px;font:700 18px "DM Mono",monospace;color:var(--lime)}
+.stat span{font-size:9px;color:var(--stat-text);text-transform:uppercase;letter-spacing:1px}
 
-.room-actions{display:flex;gap:12px;margin-top:22px}
-.room-actions button{margin:0}
+.room-actions{display:flex;gap:12px;margin-top:6px;padding:6px;max-width:391px;margin-left:auto;margin-right:auto;width:100%}
+.room-actions button{margin:0;flex:1}
 .room-actions .reset-button{background:var(--orange);border-color:var(--orange);color:var(--ink)}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);opacity:0;z-index:5;padding:12px 16px;border-radius:5px;background:var(--ink);color:var(--white);font-size:13px;transition:.2s;pointer-events:none}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* Dark mode toast — dark background with light text */
+[data-theme="dark"] .toast {
+  background: #3a3f3b;
+  color: #e8e6e0;
+}
+
+/* Poker theme toast — felt green background with gold text */
+[data-theme="poker"] .toast {
+  background: #234a38;
+  color: #d4a843;
+}
 
 /* Dark mode toggle button */
 .theme-toggle{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;font:700 11px "DM Mono",monospace;color:var(--moss);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
@@ -159,7 +399,7 @@ button { cursor:pointer; }
 .theme-toggle .icon{font-size:14px}
 #theme-toggle-landing{position:fixed;top:20px;right:20px}
 
-/* Dark mode result panel - distinct blue palette */
+/* Dark mode result panel - blue palette */
 [data-theme="dark"] .result-panel {
   background: var(--result-bg);
   color: var(--result-text);
@@ -187,8 +427,41 @@ button { cursor:pointer; }
   color: var(--result-text);
 }
 
+/* Poker theme result panel - gold palette */
+[data-theme="poker"] .result-panel {
+  background: var(--result-bg);
+  color: var(--result-text);
+}
+[data-theme="poker"] .result-heading h3 {
+  color: var(--result-text);
+}
+[data-theme="poker"] .result-heading .eyebrow {
+  color: var(--result-badge-text);
+}
+[data-theme="poker"] .revealed-badge {
+  background: var(--result-badge-bg);
+  color: var(--result-badge-text);
+}
+[data-theme="poker"] .stats {
+  background: var(--result-stats-gap);
+}
+[data-theme="poker"] .stat {
+  background: var(--result-stat-bg);
+}
+[data-theme="poker"] .stat strong {
+  color: var(--result-stat-value);
+}
+[data-theme="poker"] .stat span {
+  color: var(--result-text);
+}
+
 /* Dark mode brand text */
 [data-theme="dark"] .brand {
+  color: var(--ink);
+}
+
+/* Poker theme brand text */
+[data-theme="poker"] .brand {
   color: var(--ink);
 }
 
@@ -206,6 +479,23 @@ button { cursor:pointer; }
   color: var(--text-secondary);
 }
 [data-theme="dark"] .entry-card .card-index {
+  color: var(--moss);
+}
+
+/* Poker theme entry card inputs */
+[data-theme="poker"] .entry-card input {
+  color: var(--ink);
+}
+[data-theme="poker"] .entry-card label {
+  color: var(--ink);
+}
+[data-theme="poker"] .entry-card h2 {
+  color: var(--ink);
+}
+[data-theme="poker"] .entry-card p {
+  color: var(--text-secondary);
+}
+[data-theme="poker"] .entry-card .card-index {
   color: var(--moss);
 }
 
@@ -239,7 +529,37 @@ button { cursor:pointer; }
   border-color: var(--accent-button-bg);
 }
 
-/* Dark mode vote-modified participant - darker orange background */
+/* Poker theme accent card overrides */
+[data-theme="poker"] .accent-card {
+  background: var(--accent-bg);
+}
+[data-theme="poker"] .accent-card h2 {
+  color: var(--accent-heading);
+}
+[data-theme="poker"] .accent-card p {
+  color: var(--accent-body);
+}
+[data-theme="poker"] .accent-card .card-index {
+  color: var(--accent-index);
+}
+[data-theme="poker"] .accent-card label {
+  color: var(--accent-text);
+}
+[data-theme="poker"] .accent-card label span {
+  color: var(--accent-label);
+}
+[data-theme="poker"] .accent-card input {
+  border-color: var(--accent-input-border);
+  background: var(--accent-input-bg);
+  color: var(--accent-text);
+}
+[data-theme="poker"] .accent-card button {
+  background: var(--accent-button-bg);
+  color: var(--accent-button-text);
+  border-color: var(--accent-button-bg);
+}
+
+/* Dark mode vote-modified participant */
 [data-theme="dark"] .participant.vote-modified {
   background: #3d2a1e;
   border-color: #ff9a6b;
@@ -254,6 +574,43 @@ button { cursor:pointer; }
   color: #ff9a6b;
 }
 
+/* Poker theme playing cards - gold accents */
+[data-theme="poker"] .card {
+  border-color: #4a6a5a;
+  background: #f5f0e8;
+  color: #1a3a2a;
+  box-shadow: 0 1px 3px #00000060;
+}
+[data-theme="poker"] .card:hover {
+  border-color: #d4a843;
+  box-shadow: 0 4px 12px #00000060;
+}
+[data-theme="poker"] .card.selected {
+  background: #d4a843;
+  border-color: #d4a843;
+  color: #1a3a2a;
+  box-shadow: 0 5px 0 #8a6a2a;
+}
+[data-theme="poker"] .card.selected::before,
+[data-theme="poker"] .card.selected::after {
+  color: #1a3a2a;
+}
+
+/* Poker theme vote-modified participant */
+[data-theme="poker"] .participant.vote-modified {
+  background: #3d2a1e;
+  border-color: #ff9a6b;
+}
+[data-theme="poker"] .participant.vote-modified .vote-value {
+  color: var(--ink);
+}
+[data-theme="poker"] .participant.vote-modified .vote-initial {
+  color: var(--muted);
+}
+[data-theme="poker"] .participant.vote-modified .vote-new {
+  color: #ff9a6b;
+}
+
 /* Join-only mode: when URL has ?room= code */
 .landing-view.join-only #create-form{display:none}
 .landing-view.join-only #entry-grid{display:block;max-width:420px;margin:0 auto}
@@ -262,19 +619,98 @@ button { cursor:pointer; }
 .show-create{display:block;margin:20px auto 0;padding:10px 20px;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-family:Manrope,sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
 .show-create:hover{border-color:var(--ink);color:var(--ink)}
 
+/* Dark mode table surface */
+[data-theme="dark"] .table-surface {
+  background: #2a2f2b;
+  border-color: #3a3f3b;
+}
+[data-theme="dark"] .table-center .revealed-card {
+  background: #242826;
+  border-color: #4a5049;
+  color: #6bc676;
+}
+[data-theme="dark"] .table-participants .participant {
+  background: #242826;
+  border-color: #3a3f3b;
+}
+[data-theme="dark"] .table-participants .participant.voted {
+  border-color: #6bc676;
+  background: #1e2a1e;
+}
+[data-theme="dark"] .table-participants .participant .vote-value {
+  color: #6bc676;
+}
+[data-theme="dark"] .table-participants .avatar {
+  background: #3a3f3b;
+  color: #6bc676;
+}
+
+/* Poker theme table surface - felt green */
+[data-theme="poker"] .table-surface {
+  background: #1a3a2a;
+  border-color: #3a5a4a;
+  box-shadow: 0 8px 32px #00000060, inset 0 2px 12px #00000060;
+}
+[data-theme="poker"] .table-surface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at center, #234a38 0%, #1a3a2a 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+[data-theme="poker"] .table-center .revealed-card {
+  background: #f5f0e8;
+  border-color: #d4a843;
+  color: #1a3a2a;
+  box-shadow: 0 2px 8px #00000060;
+}
+[data-theme="poker"] .table-participants .participant {
+  background: #234a38;
+  border-color: #3a5a4a;
+}
+[data-theme="poker"] .table-participants .participant.voted {
+  border-color: #d4a843;
+  background: #2a4a38;
+}
+[data-theme="poker"] .table-participants .participant .vote-value {
+  color: #d4a843;
+}
+[data-theme="poker"] .table-participants .avatar {
+  background: #3a6a5a;
+  color: #d4a843;
+}
+
 @media(max-width:700px){
-  .shell{width:min(100% - 28px,1120px);padding-top:20px}
-  .hero{margin:65px 0 35px}
+  .shell{width:min(100% - 28px,1120px);padding-top:12px}
+  .hero{margin:40px 0 25px}
   .hero h1{letter-spacing:-3.5px}
   .entry-grid{grid-template-columns:1fr}
-  .entry-card{padding:28px}
+  .entry-card{padding:20px}
   .room-header{grid-template-columns:1fr auto}
   .status{display:none}
-  .round-intro{margin-top:48px}
+  .round-intro{margin:12px 0 8px}
   .cards{grid-template-columns:repeat(5,1fr)}
   .room-actions{flex-direction:column}
   .stats{grid-template-columns:repeat(2,1fr)}
   .room-meta{justify-self:end}
   .participants{justify-content:flex-start}
   .participant{min-width:calc(50% - 5px)}
+  /* Table responsive: ultra compact */
+  .table-container{margin:2px 0 4px;padding:0 5px}
+  .table-surface{aspect-ratio:21/7;min-height:0;border-radius:6px;width:min(95vw, 280px)}
+  .table-participants .participant{min-width:75px;max-width:108px;padding:4px 6px;border-radius:5px}
+  .table-participants .avatar{width:18px;height:18px;font-size:7px}
+  .table-participants .participant-name{font-size:11px}
+  .table-participants .participant-state{font-size:8px}
+  .table-center .revealed-card{width:32px;height:44px;font-size:14px;border-radius:5px}
+  .table-wrap{padding:6px}
+  .result-panel{padding:8px;margin-top:4px}
+  .stat{padding:4px}
+  .stat strong{font-size:12px}
+  .room-actions{margin-top:4px}
 }

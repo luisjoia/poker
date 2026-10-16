@@ -43,7 +43,7 @@
         <p id="mode-note" class="mode-note"></p>
     </section>
 
-    <section id="room-view" class="room-view hidden" aria-live="polite">
+    <section id="room-view" class="room-view hidden" aria-live="polite" style="display:flex;flex-direction:column;min-height:100vh">
         <header class="room-header">
             <button id="leave-room" class="brand text-button" aria-label="Leave room"><span> POKER🧄 </span></button>
             <div class="room-meta"><span class="room-code-label">Room code</span><button id="copy-code" class="code-pill" title="Copy room code"></button></div>
@@ -56,19 +56,27 @@
             <h2 id="round-heading">Choose your estimate</h2>
             <p id="round-subtitle">Votes stay private until someone reveals the cards.</p>
         </section>
-        <section id="participants" class="participants" aria-label="Participantes"></section>
+        <section class="table-container">
+            <div class="table-surface" id="table-surface">
+                <div class="table-center" id="table-center"></div>
+                <div class="table-participants" id="table-participants"></div>
+            </div>
+        </section>
+        <section id="participants" class="participants" aria-label="Participantes" style="display:none"></section>
         <section class="table-wrap">
             <div class="table-title"><span>Your vote</span><span id="vote-state">You have not voted yet</span></div>
             <div id="cards" class="cards" aria-label="Cartas de estimativa"></div>
         </section>
+        <!-- Result panel commented for future editing
         <section id="result-panel" class="result-panel hidden">
             <div class="result-heading"><div><p class="eyebrow">ROUND RESULT</p><h3>Cards revealed</h3></div><span class="revealed-badge">Revealed</span></div>
             <div id="stats" class="stats"></div>
         </section>
-        <div class="room-actions">
+        -->
+        <section class="room-actions">
             <button id="reveal-button" class="secondary-button">Reveal cards</button>
             <button id="reset-button" class="reset-button">New round <span>↻</span></button>
-        </div>
+        </section>
     </section>
 </main>
 <div id="toast" class="toast" role="status"></div>

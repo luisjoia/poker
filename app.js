@@ -99,6 +99,7 @@ async function joinRoom(code, name) {
 async function enterRoom(code) {
   state.room = code;
   $("#landing-view").classList.add("hidden"); $("#room-view").classList.remove("hidden");
+  document.querySelector(".shell").classList.add("room-active");
   history.replaceState({}, "", `?room=${encodeURIComponent(code)}`);
   if (firebaseReady) {
     state.unsubscribe?.();
@@ -138,6 +139,13 @@ function render(room) {
   $("#round-heading").textContent = room.revealed ? "The team has revealed the cards" : "Choose your estimate";
   $("#round-subtitle").textContent = room.revealed ? "You can change your vote once." : "Votes stay private until someone reveals the cards.";
   $("#vote-state").textContent = mine?.vote ? `You chose ${mine.vote}` : "You have not voted yet";
+
+  // Render participants around the table
+  renderTableParticipants(people, room);
+  // Render revealed votes in the center of the table
+  renderTableCenter(people, room);
+
+  // Keep old participants list for stats (hidden)
   $("#participants").innerHTML = people.map(person => {
     const voteDisplay = room.revealed && person.vote
       ? person.voteChanged
@@ -146,11 +154,71 @@ function render(room) {
       : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
     return `<article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${voteDisplay}</article>`;
   }).join("");
-  $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}">${card}</button>`).join("");
-  $("#result-panel").classList.toggle("hidden", !room.revealed);
+  $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}"><span class="card-center">${card}</span></button>`).join("");
+  // Result panel commented in HTML for future editing
+  // $("#result-panel").classList.toggle("hidden", !room.revealed);
   $("#reveal-button").classList.toggle("hidden", room.revealed || !isCreator);
   $("#reset-button").classList.toggle("hidden", !isCreator);
   if (room.revealed) renderStats(people);
+}
+
+// Position participants around the table in a circular layout
+function renderTableParticipants(people, room) {
+  const container = $("#table-participants");
+  const count = people.length;
+  if (count === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  // Calculate positions around the table
+  // Top row: ceil(count/2), Bottom row: floor(count/2)
+  const topCount = Math.ceil(count / 2);
+  const bottomCount = count - topCount;
+
+  const positions = [];
+  // Top row (above the table, y ~ -40px)
+  for (let i = 0; i < topCount; i++) {
+    const xPercent = count > 1 ? 15 + (i / Math.max(topCount - 1, 1)) * 70 : 50;
+    positions.push({ x: xPercent, y: -40 });
+  }
+  // Bottom row (below the table, y ~ 105%)
+  for (let i = 0; i < bottomCount; i++) {
+    const xPercent = count > 1 ? 15 + (i / Math.max(bottomCount - 1, 1)) * 70 : 50;
+    positions.push({ x: xPercent, y: 105 });
+  }
+
+  container.innerHTML = people.map((person, index) => {
+    const pos = positions[index];
+    const voteDisplay = room.revealed && person.vote
+      ? person.voteChanged
+        ? `<span class="vote-value"><span class="vote-initial" title="Initial vote">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`
+        : `<span class="vote-value">${person.vote}</span>`
+      : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
+    return `<article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}" style="left:${pos.x}%;top:${pos.y}%;transform:translate(-50%,-50%)">
+      <span class="avatar">${initials(person.name)}</span>
+      <span class="participant-name">${escapeHtml(person.name)}</span>
+      ${voteDisplay}
+    </article>`;
+  }).join("");
+}
+
+// Render revealed vote cards in the center of the table
+function renderTableCenter(people, room) {
+  const center = $("#table-center");
+  if (!room.revealed) {
+    center.innerHTML = "";
+    return;
+  }
+
+  const votedPeople = people.filter(person => person.vote);
+  center.innerHTML = votedPeople.map(person => {
+    const nameInitial = person.name.charAt(0).toUpperCase();
+    return `<div class="revealed-card" title="${escapeHtml(person.name)}: ${person.vote}" style="position:relative">
+      <span style="position:absolute;top:-12px;left:-12px;width:32px;height:32px;border-radius:50%;background:var(--avatar-bg);color:var(--moss);font-size:12px;font-weight:800;display:grid;place-items:center">${nameInitial}</span>
+      ${person.vote}
+    </div>`;
+  }).join("");
 }
 function escapeHtml(text) { const node = document.createElement("span"); node.textContent = text; return node.innerHTML; }
 function renderStats(people) {
@@ -178,7 +246,7 @@ async function vote(card) {
     revealed = room?.revealed ?? false;
   }
   // After reveal, allow only one vote change; before reveal, allow unlimited changes
-  if (revealed && me && me.voteChangedRound === round && card !== me.initialVote) {
+  if (revealed && me && me.voteChangedRound === round) {
     showToast("You can only change your vote once per round.");
     return;
   }
@@ -235,7 +303,7 @@ $("#join-form").addEventListener("submit", event => { event.preventDefault(); jo
 $("#cards").addEventListener("click", event => { const card = event.target.closest("[data-card]")?.dataset.card; if (card) vote(card); });
 $("#reveal-button").addEventListener("click", reveal); $("#reset-button").addEventListener("click", resetRound);
 $("#copy-code").addEventListener("click", async () => { await navigator.clipboard.writeText(state.room); showToast("Room code copied."); });
-$("#leave-room").addEventListener("click", () => { state.unsubscribe?.(); state.demoChannel?.close(); history.replaceState({}, "", location.pathname); location.reload(); });
+$("#leave-room").addEventListener("click", () => { state.unsubscribe?.(); state.demoChannel?.close(); document.querySelector(".shell").classList.remove("room-active"); history.replaceState({}, "", location.pathname); location.reload(); });
 
 const urlRoom = new URLSearchParams(location.search).get("room");
 // Auto-uppercase room code input
@@ -254,20 +322,22 @@ $("#show-create").addEventListener("click", () => {
   $("#create-name").focus();
 });
 
-// Dark mode toggle
+// Theme toggle: cycles through light → dark → light
+const themes = ["light", "dark"];
+const themeIcons = { light: "🌙", dark: "☀️" };
+const themeLabels = { light: "Dark", dark: "Light" };
 const setTheme = (theme) => {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("theme", theme);
-  const icon = theme === "dark" ? "☀️" : "🌙";
-  const label = theme === "dark" ? "Light" : "Dark";
   document.querySelectorAll(".theme-toggle").forEach(btn => {
-    btn.querySelector(".icon").textContent = icon;
-    btn.querySelector(".label").textContent = label;
+    btn.querySelector(".icon").textContent = themeIcons[theme];
+    btn.querySelector(".label").textContent = themeLabels[theme];
   });
 };
 const toggleTheme = () => {
-  const current = document.documentElement.getAttribute("data-theme");
-  setTheme(current === "dark" ? "light" : "dark");
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  const nextIndex = (themes.indexOf(current) + 1) % themes.length;
+  setTheme(themes[nextIndex]);
 };
 // Restore saved theme or respect system preference
 const savedTheme = localStorage.getItem("theme");
