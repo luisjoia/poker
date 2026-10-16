@@ -1,10 +1,9 @@
-/* ============================================================
-   CONFIGURAÇÃO DO FIREBASE
-   Define a conexão com o Firebase para sincronização em tempo real.
-   Se as credenciais não estiverem configuradas, usa modo demo local.
-   ============================================================ */
+
+// Firebase web app settings. Authentication and Firestore are loaded below.
+// The API key placeholder is replaced by build.js during deployment.
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDDbJzMv4TKCZVb2F8_3q80ZvsQTA2kkFw",
+  apiKey: "__FIREBASE_API_KEY__",
   authDomain: "scrumpoker-c1d01.firebaseapp.com",
   projectId: "scrumpoker-c1d01",
   storageBucket: "scrumpoker-c1d01.firebasestorage.app",
@@ -17,37 +16,14 @@ const firebaseConfig = {
 const cards = ["1", "2", "3", "5", "8", "13", "21", "?"];
 /* Valores numéricos para cálculo de média/mediana (exclui "?") */
 const numericCards = new Set(["1", "2", "3", "5", "8", "13", "21"]);
-/* Verifica se o Firebase está configurado. Se sim, usa sincronização real; senão, modo demo local. */
-const firebaseReady = !Object.values(firebaseConfig).some(value => value.startsWith("REPLACE_"));
-
-/* Estado global da aplicação: sala atual, ronda, ID único do utilizador, etc. */
+const firebaseReady = !Object.values(firebaseConfig).some(value => typeof value === "string" && (value.startsWith("__") || value.startsWith("REPLACE_")));
 const state = { room: null, round: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null };
 /* Atalho para document.querySelector */
 const $ = selector => document.querySelector(selector);
 
-/* ============================================================
-   MODO ESCURO / CLARO
-   Alterna entre temas e guarda a preferência no localStorage.
-   ============================================================ */
-function applyTheme(theme) {
-  const isDark = theme === "dark";
-  document.documentElement.dataset.theme = theme; /* Define o atributo data-theme no <html> */
-  localStorage.setItem("poker-theme", theme); /* Guarda a preferência */
-  $("#theme-toggle").setAttribute("aria-pressed", String(isDark));
-  $("#theme-toggle").setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} mode`);
-  $(".theme-icon").textContent = isDark ? "☀" : "☾";
-  $(".theme-label").textContent = isDark ? "Light mode" : "Dark mode";
-}
+console.log("[Firebase] Config API key:", firebaseConfig.apiKey);
+console.log("[Firebase] firebaseReady:", firebaseReady);
 
-/* Carrega o tema guardado ou deteta a preferência do sistema */
-const savedTheme = localStorage.getItem("poker-theme");
-applyTheme(savedTheme ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
-/* Botão de alternância de tema */
-$("#theme-toggle").addEventListener("click", () => {
-  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-});
-
-/* Mostra ao utilizador se está em modo Firebase ou demo local */
 $("#mode-note").textContent = firebaseReady
   ? "Firebase real-time sync is active."
   : "Local demo mode — open this page in another tab to test synchronization.";
@@ -60,17 +36,26 @@ $("#mode-note").textContent = firebaseReady
 let firestore;
 let firebaseApi;
 if (firebaseReady) {
-  const [{ initializeApp }, authApi, fireApi] = await Promise.all([
-    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
-    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"),
-    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js")
-  ]);
-  firebaseApi = fireApi;
-  const app = initializeApp(firebaseConfig);
-  const auth = authApi.getAuth(app);
-  await authApi.signInAnonymously(auth); /* Autenticação anónima para identificar cada navegador */
-  state.uid = auth.currentUser.uid;
-  firestore = fireApi.getFirestore(app);
+  try {
+    console.log("[Firebase] Initializing Firebase modules...");
+    const [{ initializeApp }, authApi, fireApi] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js")
+    ]);
+    firebaseApi = fireApi;
+    const app = initializeApp(firebaseConfig);
+    const auth = authApi.getAuth(app);
+    console.log("[Firebase] Signing in anonymously...");
+    const userCredential = await authApi.signInAnonymously(auth);
+    state.uid = userCredential.user.uid;
+    console.log("[Firebase] Authenticated with UID:", state.uid);
+    firestore = fireApi.getFirestore(app);
+    console.log("[Firebase] Firestore initialized successfully.");
+  } catch (error) {
+    console.error("[Firebase] Failed to initialize:", error);
+    showToast("Failed to connect to Firebase. Check console for details.");
+  }
 }
 
 /* ============================================================
@@ -134,10 +119,22 @@ async function createRoom(name, title) {
   const room = { code: newCode(), title: title.trim() || "New team", revealed: false, round: 1, participants: {} };
   room.participants[state.uid] = { name, vote: null };
   if (firebaseReady) {
-    const { doc, setDoc } = firebaseApi;
-    await setDoc(doc(firestore, "rooms", room.code), { title: room.title, revealed: false, round: 1 });
-    await setDoc(doc(firestore, "rooms", room.code, "participants", state.uid), room.participants[state.uid]);
-  } else saveDemoRoom(room);
+    console.log("[CreateRoom] Writing to Firestore, room code:", room.code);
+    try {
+      const { doc, setDoc } = firebaseApi;
+      await setDoc(doc(firestore, "rooms", room.code), { title: room.title, revealed: false, round: 1 });
+      console.log("[CreateRoom] Room document created successfully.");
+      await setDoc(doc(firestore, "rooms", room.code, "participants", state.uid), room.participants[state.uid]);
+      console.log("[CreateRoom] Participant document created successfully.");
+    } catch (error) {
+      console.error("[CreateRoom] Firebase error:", error);
+      showToast("Error creating room: " + error.message);
+      return;
+    }
+  } else {
+    console.log("[CreateRoom] Demo mode - saving to localStorage");
+    saveDemoRoom(room);
+  }
   enterRoom(room.code, name);
 }
 
