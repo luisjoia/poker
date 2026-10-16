@@ -59,8 +59,8 @@ function roomKey(code) { return `estima-room-${code}`; }
 function getDemoRoom(code) { return JSON.parse(localStorage.getItem(roomKey(code)) || "null"); }
 function saveDemoRoom(room) { localStorage.setItem(roomKey(room.code), JSON.stringify(room)); state.demoChannel?.postMessage(room); render(room); }
 
-async function createRoom(name, title) {
-  const room = { code: newCode(), title: title.trim() || "New team", revealed: false, round: 1, creator: state.uid, participants: {} };
+async function createRoom(name) {
+  const room = { code: newCode(), title: "New team", revealed: false, round: 1, creator: state.uid, participants: {} };
   room.participants[state.uid] = { name, vote: null };
   if (firebaseReady) {
     console.log("[CreateRoom] Writing to Firestore, room code:", room.code);
@@ -119,21 +119,34 @@ function render(room) {
   if (!room) return;
   state.round = room.round;
   // A vote only belongs to the current round. Old votes stay in Firestore but are ignored.
-  const people = Object.entries(room.participants || {}).map(([id, person]) => ({
-    id,
-    ...person,
-    vote: person.voteRound === room.round ? person.vote : null
-  }));
+  const people = Object.entries(room.participants || {}).map(([id, person]) => {
+    const currentVote = person.voteRound === room.round ? person.vote : null;
+    const initialVote = person.initialVoteRound === room.round ? person.initialVote : null;
+    const voteChanged = person.voteChangedRound === room.round;
+    return {
+      id,
+      ...person,
+      vote: currentVote,
+      initialVote: initialVote,
+      voteChanged: voteChanged
+    };
+  });
   const mine = people.find(person => person.id === state.uid);
   const isCreator = room.creator === state.uid;
-  $("#room-title-display").textContent = room.title;
   $("#copy-code").textContent = room.code;
   $("#round-label").textContent = `ROUND ${String(room.round).padStart(2, "0")}`;
   $("#round-heading").textContent = room.revealed ? "The team has revealed the cards" : "Choose your estimate";
-  $("#round-subtitle").textContent = room.revealed ? "Any participant can start a new round." : "Votes stay private until someone reveals the cards.";
+  $("#round-subtitle").textContent = room.revealed ? "You can change your vote once." : "Votes stay private until someone reveals the cards.";
   $("#vote-state").textContent = mine?.vote ? `You chose ${mine.vote}` : "You have not voted yet";
-  $("#participants").innerHTML = people.map(person => `<article class="participant ${person.vote ? "voted" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${room.revealed && person.vote ? `<span class="vote-value">${person.vote}</span>` : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`}</article>`).join("");
-  $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}" ${room.revealed ? "disabled" : ""}>${card}</button>`).join("");
+  $("#participants").innerHTML = people.map(person => {
+    const voteDisplay = room.revealed && person.vote
+      ? person.voteChanged
+        ? `<span class="vote-value"><span class="vote-initial" title="Initial vote">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`
+        : `<span class="vote-value">${person.vote}</span>`
+      : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
+    return `<article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${voteDisplay}</article>`;
+  }).join("");
+  $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}">${card}</button>`).join("");
   $("#result-panel").classList.toggle("hidden", !room.revealed);
   $("#reveal-button").classList.toggle("hidden", room.revealed || !isCreator);
   $("#reset-button").classList.toggle("hidden", !isCreator);
@@ -150,11 +163,40 @@ function renderStats(people) {
 async function vote(card) {
   const room = firebaseReady ? null : getDemoRoom(state.room);
   const round = room?.round ?? state.round;
+  // Get current participant data and room revealed state from Firebase or demo storage
+  let me;
+  let revealed = false;
   if (firebaseReady) {
-    await firebaseApi.setDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid), { vote: card, voteRound: round }, { merge: true });
+    const [participantSnap, roomSnap] = await Promise.all([
+      firebaseApi.getDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid)),
+      firebaseApi.getDoc(firebaseApi.doc(firestore, "rooms", state.room))
+    ]);
+    me = participantSnap.exists() ? participantSnap.data() : null;
+    revealed = roomSnap.exists() ? (roomSnap.data().revealed ?? false) : false;
   } else {
-    room.participants[state.uid].vote = card;
-    room.participants[state.uid].voteRound = round;
+    me = room?.participants?.[state.uid];
+    revealed = room?.revealed ?? false;
+  }
+  // After reveal, allow only one vote change; before reveal, allow unlimited changes
+  if (revealed && me && me.voteChangedRound === round && card !== me.initialVote) {
+    showToast("You can only change your vote once per round.");
+    return;
+  }
+  // Save the initial vote the first time a person votes in a round
+  const hasVotedBefore = me && me.voteRound === round;
+  const payload = { vote: card, voteRound: round };
+  if (!hasVotedBefore) {
+    payload.initialVote = card;
+    payload.initialVoteRound = round;
+    payload.voteChangedRound = null;
+  } else if (revealed && card !== me.initialVote) {
+    // This is a change from the initial vote (only tracked after reveal)
+    payload.voteChangedRound = round;
+  }
+  if (firebaseReady) {
+    await firebaseApi.setDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid), payload, { merge: true });
+  } else {
+    Object.assign(room.participants[state.uid], payload);
     saveDemoRoom(room);
   }
 }
@@ -188,7 +230,7 @@ async function resetRound() {
   }
 }
 
-$("#create-form").addEventListener("submit", event => { event.preventDefault(); createRoom($("#create-name").value.trim(), $("#room-title").value); });
+$("#create-form").addEventListener("submit", event => { event.preventDefault(); createRoom($("#create-name").value.trim()); });
 $("#join-form").addEventListener("submit", event => { event.preventDefault(); joinRoom($("#room-code").value, $("#join-name").value.trim()); });
 $("#cards").addEventListener("click", event => { const card = event.target.closest("[data-card]")?.dataset.card; if (card) vote(card); });
 $("#reveal-button").addEventListener("click", reveal); $("#reset-button").addEventListener("click", resetRound);
@@ -196,6 +238,9 @@ $("#copy-code").addEventListener("click", async () => { await navigator.clipboar
 $("#leave-room").addEventListener("click", () => { state.unsubscribe?.(); state.demoChannel?.close(); history.replaceState({}, "", location.pathname); location.reload(); });
 
 const urlRoom = new URLSearchParams(location.search).get("room");
+// Auto-uppercase room code input
+$("#room-code").addEventListener("input", e => e.target.value = e.target.value.toUpperCase());
+
 if (urlRoom) {
   $("#room-code").value = urlRoom;
   $("#join-name").focus();
@@ -208,3 +253,28 @@ $("#show-create").addEventListener("click", () => {
   $("#show-create").classList.add("hidden");
   $("#create-name").focus();
 });
+
+// Dark mode toggle
+const setTheme = (theme) => {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+  const icon = theme === "dark" ? "☀️" : "🌙";
+  const label = theme === "dark" ? "Light" : "Dark";
+  document.querySelectorAll(".theme-toggle").forEach(btn => {
+    btn.querySelector(".icon").textContent = icon;
+    btn.querySelector(".label").textContent = label;
+  });
+};
+const toggleTheme = () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  setTheme(current === "dark" ? "light" : "dark");
+};
+// Restore saved theme or respect system preference
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme) {
+  setTheme(savedTheme);
+} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  setTheme("dark");
+}
+$("#theme-toggle-landing").addEventListener("click", toggleTheme);
+$("#theme-toggle-room").addEventListener("click", toggleTheme);
