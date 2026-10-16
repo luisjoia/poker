@@ -196,4 +196,15 @@ $("#copy-code").addEventListener("click", async () => { await navigator.clipboar
 $("#leave-room").addEventListener("click", () => { state.unsubscribe?.(); state.demoChannel?.close(); history.replaceState({}, "", location.pathname); location.reload(); });
 
 const urlRoom = new URLSearchParams(location.search).get("room");
-if (urlRoom) { $("#room-code").value = urlRoom; $("#join-name").focus(); showToast("Enter your name to join the room."); }
+if (urlRoom) {
+  $("#room-code").value = urlRoom;
+  $("#join-name").focus();
+  $("#landing-view").classList.add("join-only");
+  $("#show-create").classList.remove("hidden");
+  showToast("Enter your name to join the room.");
+}
+$("#show-create").addEventListener("click", () => {
+  $("#landing-view").classList.remove("join-only");
+  $("#show-create").classList.add("hidden");
+  $("#create-name").focus();
+});
