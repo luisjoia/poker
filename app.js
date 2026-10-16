@@ -60,13 +60,13 @@ function getDemoRoom(code) { return JSON.parse(localStorage.getItem(roomKey(code
 function saveDemoRoom(room) { localStorage.setItem(roomKey(room.code), JSON.stringify(room)); state.demoChannel?.postMessage(room); render(room); }
 
 async function createRoom(name, title) {
-  const room = { code: newCode(), title: title.trim() || "New team", revealed: false, round: 1, participants: {} };
+  const room = { code: newCode(), title: title.trim() || "New team", revealed: false, round: 1, creator: state.uid, participants: {} };
   room.participants[state.uid] = { name, vote: null };
   if (firebaseReady) {
     console.log("[CreateRoom] Writing to Firestore, room code:", room.code);
     try {
       const { doc, setDoc } = firebaseApi;
-      await setDoc(doc(firestore, "rooms", room.code), { title: room.title, revealed: false, round: 1 });
+      await setDoc(doc(firestore, "rooms", room.code), { title: room.title, revealed: false, round: 1, creator: state.uid });
       console.log("[CreateRoom] Room document created successfully.");
       await setDoc(doc(firestore, "rooms", room.code, "participants", state.uid), room.participants[state.uid]);
       console.log("[CreateRoom] Participant document created successfully.");
@@ -125,6 +125,7 @@ function render(room) {
     vote: person.voteRound === room.round ? person.vote : null
   }));
   const mine = people.find(person => person.id === state.uid);
+  const isCreator = room.creator === state.uid;
   $("#room-title-display").textContent = room.title;
   $("#copy-code").textContent = room.code;
   $("#round-label").textContent = `ROUND ${String(room.round).padStart(2, "0")}`;
@@ -134,7 +135,8 @@ function render(room) {
   $("#participants").innerHTML = people.map(person => `<article class="participant ${person.vote ? "voted" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${room.revealed && person.vote ? `<span class="vote-value">${person.vote}</span>` : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`}</article>`).join("");
   $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}" ${room.revealed ? "disabled" : ""}>${card}</button>`).join("");
   $("#result-panel").classList.toggle("hidden", !room.revealed);
-  $("#reveal-button").classList.toggle("hidden", room.revealed);
+  $("#reveal-button").classList.toggle("hidden", room.revealed || !isCreator);
+  $("#reset-button").classList.toggle("hidden", !isCreator);
   if (room.revealed) renderStats(people);
 }
 function escapeHtml(text) { const node = document.createElement("span"); node.textContent = text; return node.innerHTML; }
@@ -157,16 +159,29 @@ async function vote(card) {
   }
 }
 async function reveal() {
-  if (firebaseReady) await firebaseApi.updateDoc(firebaseApi.doc(firestore, "rooms", state.room), { revealed: true });
-  else { const room = getDemoRoom(state.room); room.revealed = true; saveDemoRoom(room); }
+  const room = firebaseReady ? null : getDemoRoom(state.room);
+  if (room && room.creator !== state.uid) return showToast("Only the room creator can reveal the cards.");
+  if (firebaseReady) {
+    const { doc, getDoc } = firebaseApi;
+    const snap = await getDoc(doc(firestore, "rooms", state.room));
+    if (!snap.exists()) return showToast("Room not found.");
+    if (snap.data().creator !== state.uid) return showToast("Only the room creator can reveal the cards.");
+    await firebaseApi.updateDoc(firebaseApi.doc(firestore, "rooms", state.room), { revealed: true });
+  } else {
+    room.revealed = true; saveDemoRoom(room);
+  }
 }
 async function resetRound() {
   if (!confirm("Start a new round for the entire team?")) return;
+  const room = firebaseReady ? null : getDemoRoom(state.room);
+  if (room && room.creator !== state.uid) return showToast("Only the room creator can start a new round.");
   if (firebaseReady) {
-    const { doc, increment, updateDoc } = firebaseApi;
+    const { doc, getDoc, increment, updateDoc } = firebaseApi;
+    const snap = await getDoc(doc(firestore, "rooms", state.room));
+    if (!snap.exists()) return showToast("Room not found.");
+    if (snap.data().creator !== state.uid) return showToast("Only the room creator can start a new round.");
     await updateDoc(doc(firestore, "rooms", state.room), { revealed: false, round: increment(1) });
   } else {
-    const room = getDemoRoom(state.room);
     room.revealed = false;
     room.round += 1;
     saveDemoRoom(room);
