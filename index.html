@@ -1,3 +1,7 @@
+<!-- ============================================================
+     SCRUM POKER — Estrutura HTML principal
+     Duas vistas: landing (criar/juntar sala) e room (jogo em si).
+     ============================================================ -->
 <!doctype html>
 <html lang="pt-PT">
 <head>
@@ -5,20 +9,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Collaborative Scrum Poker for teams." />
     <title>Scrum Poker</title>
+    <!-- Fontes: DM Mono (cartas) e Manrope (texto) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Estilos: base, modo escuro, mesa de poker e arena -->
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="dark-mode.css" />
+    <link rel="stylesheet" href="poker-table.css" />
+    <link rel="stylesheet" href="poker-arena.css" />
 </head>
 <body>
 <main class="shell">
+
+    <!-- ============================================================
+         VISTA 1: LANDING — Criar ou juntar uma sala
+         ============================================================ -->
     <section id="landing-view" class="landing-view">
         <div class="brand"><span class="brand-mark">P</span><span> POKER🧄</span></div>
         <div class="hero">
-            <h1><br/></h1>
             <p class="hero-copy">Create a room and vote.</p>
         </div>
         <div class="entry-grid">
+            <!-- Formulário para criar uma nova sala -->
             <form id="create-form" class="entry-card accent-card">
                 <span class="card-index">01</span>
                 <h2>Create a room</h2>
@@ -29,6 +42,7 @@
                 <input id="room-title" maxlength="48" placeholder="E.g. Bananas" />
                 <button type="submit">Create room <span>→</span></button>
             </form>
+            <!-- Formulário para juntar uma sala existente -->
             <form id="join-form" class="entry-card">
                 <span class="card-index">02</span>
                 <h2>Join a room</h2>
@@ -40,36 +54,61 @@
                 <button class="secondary-button" type="submit">Join room <span>→</span></button>
             </form>
         </div>
+        <!-- Mostra se está em modo Firebase ou demo local -->
         <p id="mode-note" class="mode-note"></p>
     </section>
 
+    <!-- ============================================================
+         VISTA 2: SALA — O jogo de Scrum Poker
+         Contém a mesa, os participantes, as cartas e os controlos.
+         ============================================================ -->
     <section id="room-view" class="room-view hidden" aria-live="polite">
+        <!-- Cabeçalho: botão sair, nome da sala, código copiável e estado -->
         <header class="room-header">
-            <button id="leave-room" class="brand text-button" aria-label="Leave room"><span class="brand-mark">E</span><span> POKER🧄 </span></button>
+            <button id="leave-room" class="brand text-button" aria-label="Leave room"><span class="brand-mark">P</span><span> POKER🧄 </span></button>
             <div class="room-meta"><span id="room-title-display">Room</span><button id="copy-code" class="code-pill" title="Copy room code"></button></div>
-            <div class="status"><span class="status-dot"></span><span id="status-label">Em tempo real</span></div>
+            <div class="status"><span class="status-dot"></span><span id="status-label">Real-time</span></div>
         </header>
+        <!-- Info da ronda: número, título e subtítulo -->
         <section class="round-intro">
-            <p class="eyebrow" id="round-label">RONDA 01</p>
+            <p class="eyebrow" id="round-label">ROUND 01</p>
             <h2 id="round-heading">Choose your estimate</h2>
             <p id="round-subtitle">Votes stay private until someone reveals the cards.</p>
         </section>
-        <section id="participants" class="participants" aria-label="Participantes"></section>
-        <section class="table-wrap">
-            <div class="table-title"><span>Your vote</span><span id="vote-state">You have not voted yet</span></div>
-            <div id="cards" class="cards" aria-label="Cartas de estimativa"></div>
-        </section>
+        <!-- Arena: mesa circular + participantes ao redor -->
+        <div class="poker-arena">
+            <!-- Container dos participantes — preenchido dinamicamente pelo JS -->
+            <section id="participants" class="participants" aria-label="Participants"></section>
+            <!-- Mesa de poker com as cartas votadas -->
+            <section class="table-wrap poker-table">
+                <div id="table-cards" class="cards" aria-label="Cards on table"></div>
+            </section>
+        </div>
+        <!-- Cartas em leque do jogador — fixas no fundo do ecrã, preenchidas pelo JS -->
+        <div id="player-hand" class="player-hand" aria-label="Your cards"></div>
+        <!-- Painel de resultados: aparece apenas quando as cartas são reveladas -->
         <section id="result-panel" class="result-panel hidden">
             <div class="result-heading"><div><p class="eyebrow">ROUND RESULT</p><h3>Cards revealed</h3></div><span class="revealed-badge">Revealed</span></div>
             <div id="stats" class="stats"></div>
         </section>
+        <!-- Botões de ação: revelar cartas e iniciar nova ronda -->
         <div class="room-actions">
             <button id="reveal-button" class="secondary-button">Reveal cards</button>
             <button id="reset-button" class="reset-button">New round <span>↻</span></button>
         </div>
     </section>
 </main>
+
+<!-- Botão flutuante para alternar entre modo claro e escuro -->
+<button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark mode">
+    <span class="theme-icon" aria-hidden="true">☾</span>
+    <span class="theme-label">Dark mode</span>
+</button>
+
+<!-- Notificações temporárias (toast) -->
 <div id="toast" class="toast" role="status"></div>
+
+<!-- Script principal — módulo ES com toda a lógica do jogo -->
 <script type="module" src="app.js"></script>
 </body>
 </html>
