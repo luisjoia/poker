@@ -27,7 +27,7 @@ let firestore;
 let firebaseApi;
 if (firebaseReady) {
   try {
-    console.log("[Firebase] Initializing Firebase modules...");
+    console.log("[Firebase] Initializing Firebase modules....");
     const [{ initializeApp }, authApi, fireApi] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"),
