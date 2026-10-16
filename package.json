@@ -1,0 +1,8 @@
+{
+  "name": "scrum-poker",
+  "version": "1.0.0",
+  "description": "Collaborative Scrum Poker for teams",
+  "scripts": {
+    "build": "node build.js"
+  }
+}
