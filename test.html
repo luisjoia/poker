@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste de Reveal de Votos</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #1a1d1b;
+            color: #e8e6e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 80px; font-size: 24px; }
+        .controls {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            justify-content: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .controls label { font-size: 14px; }
+        .controls input[type="range"] {
+            width: 200px;
+            accent-color: #6bc676;
+        }
+        .controls span {
+            font-size: 18px;
+            font-weight: 700;
+            color: #6bc676;
+            min-width: 30px;
+        }
+        .controls button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #6bc676;
+            color: #1a1d1b;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .controls button:hover { background: #7dd68a; }
+        .controls button.secondary {
+            background: #3a3f3b;
+            color: #e8e6e0;
+        }
+        .controls button.secondary:hover { background: #4a4f4b; }
+        .controls button.danger {
+            background: #ff7851;
+            color: #1a1d1b;
+        }
+        .controls button.danger:hover { background: #ff9a6b; }
+        .table-container {
+            position: relative;
+            margin: 40px 0 120px 0;
+        }
+        .table-surface {
+            position: relative;
+            width: min(700px, 92vw);
+            aspect-ratio: 2.5/1;
+            border-radius: 999px;
+            background: #2a2f2b;
+            border: 1px solid #3a3f3b;
+            box-shadow: 0 3px 12px #00000040, inset 0 1px 4px #00000040;
+            overflow: visible;
+        }
+        .table-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            padding: 6px;
+            max-width: 55%;
+            max-height: 55%;
+        }
+        .revealed-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 65px;
+            border-radius: 7px;
+            background: #242826;
+            border: 1px solid #3a3f3b;
+            font: 700 19px "DM Mono", monospace;
+            color: #6bc676;
+            box-shadow: 0 2px 8px #00000040;
+            animation: dealCard 0.3s ease-out;
+        }
+        @keyframes dealCard {
+            from { transform: scale(0) rotate(180deg); opacity: 0; }
+            to { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .participant-wrapper {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transform: translate(-50%, -50%);
+        }
+        .participant-wrapper.top-side {
+            transform: translate(-50%, calc(-50% - 20px));
+        }
+        .participant-wrapper.bottom-side {
+            transform: translate(-50%, calc(-50% + 20px));
+        }
+        .participant-wrapper.left-side {
+            transform: translate(calc(-50% - 16px), -50%);
+        }
+        .participant-wrapper.right-side {
+            transform: translate(calc(-50% + 16px), -50%);
+        }
+        .participant {
+            width: 53px;
+            height: 72px;
+            padding: 3px 2px;
+            border: 1px solid #3a3f3b;
+            border-radius: 6px;
+            background: #242826;
+            text-align: center;
+            box-shadow: 0 1px 3px #00000040;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            cursor: pointer;
+        }
+        .participant:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 6px #00000040;
+        }
+        .participant.voted {
+            border-color: #6bc676;
+            background: #2a332a;
+        }
+        .participant.vote-modified {
+            border-color: #ff9a6b;
+            background: #3d2a1e;
+        }
+        .participant .avatar {
+            display: grid;
+            place-items: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3a3f3b;
+            color: #6bc676;
+            font-size: 8px;
+            font-weight: 800;
+        }
+        .participant .vote-value {
+            color: #6bc676;
+            font: 700 12px "DM Mono", monospace;
+            line-height: 1;
+        }
+        .participant .participant-state {
+            display: block;
+            margin-top: 0;
+            color: #8a9488;
+            font-size: 7px;
+            line-height: 1;
+        }
+        .vote-initial {
+            color: #8a9488;
+            text-decoration: line-through;
+            font-size: 10px;
+            position: relative;
+            display: inline-block;
+        }
+        .vote-new {
+            position: relative;
+            font-weight: 700;
+        }
+        .participant-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e8e6e0;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .info {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #8a9488;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        .info code {
+            background: #242826;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        .result-panel {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+            max-width: none;
+            width: auto;
+        }
+        .result-panel.hidden { display: none; }
+        .stats {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .stats .stat {
+            padding: 8px 12px;
+            background: #1a1d1b;
+            text-align: center;
+            border-radius: 6px;
+            width: 100%;
+        }
+        .stats .stat strong {
+            display: block;
+            margin-top: 2px;
+            font: 700 14px "DM Mono", monospace;
+            color: #6bc676;
+        }
+        .stats .stat span {
+            font-size: 7px;
+            color: #8a9488;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stats .stat.most-voted {
+            background: #1a3a2a;
+            padding: 12px 20px;
+            width: 100%;
+        }
+        .stats .stat.most-voted strong {
+            font-size: 22px;
+            color: #c7ff4d;
+        }
+        .stats .stat.most-voted span {
+            font-size: 8px;
+        }
+        .info-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            width: 100%;
+            background: #3a3f3b;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .info-stats .stat {
+            border-radius: 0;
+            padding: 6px 4px;
+        }
+        .info-stats .stat strong {
+            font-size: 11px;
+        }
+        .info-stats .stat span {
+            font-size: 6px;
+        }
+        .hidden { display: none; }
+        .debug-controls {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+            align-items: center;
+        }
+        .debug-controls label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #8a9488;
+            cursor: pointer;
+        }
+        .debug-controls input[type="checkbox"] {
+            accent-color: #6bc676;
+            width: 16px;
+            height: 16px;
+        }
+        .guide-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            height: 1px;
+            transform-origin: 0 50%;
+            background: #ff785166;
+            pointer-events: none;
+            z-index: 0;
+            transition: background 0.2s;
+        }
+        .edit-mode .guide-line {
+            pointer-events: auto;
+            cursor: pointer;
+            height: 6px;
+            background: #ff7851aa;
+        }
+        .edit-mode .guide-line:hover {
+            background: #ff7851;
+        }
+        .edit-mode .guide-line.dragging {
+            background: #6bc676;
+            height: 8px;
+        }
+        .guide-line-handle {
+            position: absolute;
+            right: -6px;
+            top: -5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff7851;
+            cursor: grab;
+            pointer-events: auto;
+            display: none;
+        }
+        .edit-mode .guide-line-handle {
+            display: block;
+        }
+        .guide-line-handle:active {
+            cursor: grabbing;
+        }
+        .angle-label {
+            position: absolute;
+            font-size: 9px;
+            font-weight: 700;
+            color: #ff7851;
+            background: #1a1d1b;
+            padding: 1px 4px;
+            border-radius: 3px;
+            pointer-events: none;
+            z-index: 1;
+            white-space: nowrap;
+        }
+        .participant.overlapping {
+            border-color: #ff7851 !important;
+            box-shadow: 0 0 0 2px #ff785188, 0 1px 3px #00000040 !important;
+        }
+        .overlap-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff7851;
+            color: #1a1d1b;
+            font-size: 10px;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            z-index: 2;
+        }
+        .debug-info {
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: #242826;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #8a9488;
+            max-height: 150px;
+            overflow-y: auto;
+            width: min(700px, 92vw);
+        }
+        .debug-info strong { color: #6bc676; }
+        .debug-info .overlap { color: #ff7851; }
+        .debug-info table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }
+        .debug-info th, .debug-info td {
+            padding: 2px 8px;
+            text-align: left;
+            border-bottom: 1px solid #3a3f3b;
+            font-size: 11px;
+        }
+        .debug-info th { color: #6bc676; font-weight: 700; }
+        .participant.dragging {
+            cursor: grabbing !important;
+            z-index: 100 !important;
+            box-shadow: 0 0 0 3px #6bc676, 0 2px 8px #00000080 !important;
+        }
+        .edit-mode .participant {
+            cursor: grab !important;
+        }
+        .export-area {
+            margin-top: 12px;
+            width: min(700px, 92vw);
+        }
+        .export-area textarea {
+            width: 100%;
+            height: 200px;
+            background: #1a1d1b;
+            color: #6bc676;
+            border: 1px solid #3a3f3b;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            resize: vertical;
+        }
+        .export-area button {
+            margin-top: 6px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #3a3f3b;
+            color: #e8e6e0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .export-area button:hover { background: #4a4f4b; }
+    </style>
+</head>
+<body>
+    <h1>🃏 Teste de Reveal de Votos</h1>
+    
+    <div class="table-container">
+        <div class="table-surface" id="table">
+            <div class="table-center" id="table-center">
+                <section id="result-panel" class="result-panel hidden">
+                    <div id="stats" class="stats"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="count">Participantes:</label>
+            <input type="range" id="count" min="1" max="20" value="4">
+            <span id="count-display">4</span>
+        </div>
+        <div class="control-group">
+            <button id="vote-random">🎲 Votos Aleatórios</button>
+            <button id="reveal" class="secondary">👁️ Reveal</button>
+            <button id="reset" class="danger">🔄 Reset</button>
+        </div>
+    </div>
+
+    <div class="debug-controls">
+        <label><input type="checkbox" id="show-guides"> Linhas de guia</label>
+        <label><input type="checkbox" id="show-angles"> Mostrar ângulos</label>
+        <label><input type="checkbox" id="show-overlaps" checked> Detetar sobreposições</label>
+        <label><input type="checkbox" id="show-debug-info"> Tabela de posições</label>
+        <label style="color:#6bc676; font-weight:700;"><input type="checkbox" id="edit-mode"> ✏️ Modo editar</label>
+    </div>
+    
+    <div class="controls" style="margin-top:8px;">
+        <button id="export-positions" class="secondary">📋 Exportar posições</button>
+        <button id="reset-positions" class="danger">🔄 Reset posições</button>
+    </div>
+    
+    <div class="export-area hidden" id="export-area">
+        <textarea id="export-text" readonly></textarea>
+        <button id="copy-export">📋 Copiar para clipboard</button>
+    </div>
+    
+    <div class="debug-info hidden" id="debug-info"></div>
+    
+    <script>
+        const countInput = document.getElementById('count');
+        const countDisplay = document.getElementById('count-display');
+        const table = document.getElementById('table');
+        
+        const cards = [1, 2, 3, 5, 8, 13, 21, '?'];
+        const names = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Peter', 'Quinn', 'Rose', 'Sam', 'Tina'];
+        
+        let participants = [];
+        let revealed = false;
+        
+        // Debug state
+        const showGuides = document.getElementById('show-guides');
+        const showAngles = document.getElementById('show-angles');
+        const showOverlaps = document.getElementById('show-overlaps');
+        const showDebugInfo = document.getElementById('show-debug-info');
+        const editMode = document.getElementById('edit-mode');
+        const debugInfoEl = document.getElementById('debug-info');
+        
+        // Custom positions storage (when edit mode is used)
+        let customPositions = null; // null means use auto-calculation
+        
+        // Drag state
+        let dragIndex = -1;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        
+        function initParticipants(count) {
+            participants = [];
+            for (let i = 0; i < count; i++) {
+                participants.push({
+                    name: names[i % names.length],
+                    vote: null,
+                    initialVote: null,
+                    voteChanged: false,
+                    voteChangedRound: 0,
+                    round: 1
+                });
+            }
+            revealed = false;
+            render();
+        }
+        
+        function randomVote() {
+            let votedCount = 0;
+            participants.forEach((p, i) => {
+                // 70% chance de votar
+                if (Math.random() < 0.7) {
+                    const card = cards[Math.floor(Math.random() * cards.length)];
+                    if (!p.vote) {
+                        p.initialVote = card;
+                    }
+                    p.vote = card;
+                    p.round = 1;
+                    votedCount++;
+                }
+            });
+            render();
+        }
+        
+        function revealVotes() {
+            const voted = participants.filter(p => p.vote);
+            if (voted.length === 0) {
+                return;
+            }
+            revealed = true;
+            renderStats();
+            render();
+        }
+        
+        function renderStats() {
+            const numericCards = new Set([1, 2, 3, 5, 8, 13, 21]);
+            const votes = participants
+                .filter(p => p.vote && numericCards.has(p.vote))
+                .map(p => p.vote);
+            const values = votes.map(v => Number(v)).sort((a, b) => a - b);
+            const average = values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
+            // Calculate mode (most voted value)
+            const mode = votes.length ? Object.entries(votes.reduce((counts, v) => { counts[v] = (counts[v] || 0) + 1; return counts; }, {})).sort((a,b) => b[1] - a[1])[0][0] : null;
+            const fmt = value => value === null ? "—" : String(value).replace(".5", ",5");
+            // Most voted highlighted in center, other stats below
+            const modeValue = fmt(mode);
+            const infoStats = [
+                ["Average", fmt(average && +average.toFixed(1))],
+                ["Highest", fmt(values.at(-1) ?? null)],
+                ["Lowest", fmt(values[0] ?? null)]
+            ];
+            document.getElementById('stats').innerHTML =
+                `<div class="stat most-voted"><span>MOST VOTED</span><strong>${modeValue}</strong></div>` +
+                `<div class="info-stats">${infoStats.map(([label, value]) =>
+                    `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`
+                ).join("")}</div>`;
+            document.getElementById('result-panel').classList.toggle('hidden', !revealed);
+        }
+        
+        function resetVotes() {
+            participants.forEach(p => {
+                p.vote = null;
+                p.initialVote = null;
+                p.voteChanged = false;
+                p.voteChangedRound = 0;
+            });
+            revealed = false;
+            // Hide the result panel to clear the table
+            document.getElementById('result-panel').classList.add('hidden');
+            render();
+        }
+        
+        function changeVote(index) {
+            const p = participants[index];
+            
+            // Se já mudou o voto após reveal, bloqueia
+            if (revealed && p.voteChangedRound === p.round) {
+                return;
+            }
+            
+            // Escolhe um voto diferente do atual
+            const availableCards = cards.filter(c => c !== p.vote);
+            const newVote = availableCards[Math.floor(Math.random() * availableCards.length)];
+            
+            if (!p.initialVote) {
+                p.initialVote = p.vote;
+            }
+            
+            // Se já tem voto e estamos após reveal, marca como mudado
+            if (revealed && p.vote && p.vote !== newVote) {
+                p.voteChanged = true;
+                p.voteChangedRound = p.round;
+            }
+            
+            p.vote = newVote;
+            if (revealed) renderStats();
+            render();
+        }
+        
+        function detectOverlaps(positions) {
+            const tableRect = table.getBoundingClientRect();
+            const cardW = 53;
+            const cardH = 72;
+            const overlaps = new Map();
+            
+            for (let i = 0; i < positions.length; i++) {
+                overlaps.set(i, 0);
+                const p1 = positions[i];
+                const x1 = (p1.x / 100) * tableRect.width;
+                const y1 = (p1.y / 100) * tableRect.height;
+                
+                for (let j = i + 1; j < positions.length; j++) {
+                    const p2 = positions[j];
+                    const x2 = (p2.x / 100) * tableRect.width;
+                    const y2 = (p2.y / 100) * tableRect.height;
+                    
+                    const dx = Math.abs(x1 - x2);
+                    const dy = Math.abs(y1 - y2);
+                    
+                    // Se as cartas se sobrepõem ou estão muito próximas (< 5px)
+                    if (dx < cardW && dy < cardH) {
+                        overlaps.set(i, overlaps.get(i) + 1);
+                        overlaps.set(j, overlaps.get(j) + 1);
+                    }
+                }
+            }
+            return overlaps;
+        }
+        
+        function calculateAutoPositions(count) {
+            const positions = [];
+            // Custom positions for 20 participants (manually adjusted to avoid overlaps)
+            // For fewer participants, select a uniform subset of these positions
+            const fullPositions = [
+                { x: 51.14, y: -15.5 }, { x: 68.92, y: -15.25 }, { x: 84.09, y: -13.1 },
+                { x: 94.78, y: -9.78 }, { x: 103.88, y: 15.9 }, { x: 107.86, y: 51.79 },
+                { x: 105.73, y: 91.25 }, { x: 94.78, y: 111.56 }, { x: 84.09, y: 113.1 },
+                { x: 68.07, y: 118.47 }, { x: 48.86, y: 118.71 }, { x: 32.08, y: 118.11 },
+                { x: 17.48, y: 117.03 }, { x: 5.65, y: 105.49 }, { x: -4.16, y: 86.6 },
+                { x: -6, y: 50 }, { x: -4.02, y: 13.75 }, { x: 6.22, y: -7.63 },
+                { x: 15.91, y: -13.1 }, { x: 33.36, y: -14.9 }
+            ];
+            if (count <= 20) {
+                // Select a uniform subset of the 20 positions, ensuring even distribution
+                const used = new Set();
+                for (let i = 0; i < count; i++) {
+                    const idx = Math.floor((i * 20) / count) % 20;
+                    let attempts = 0;
+                    while (used.has(idx) && attempts < 20) {
+                        idx = (idx + 1) % 20;
+                        attempts++;
+                    }
+                    used.add(idx);
+                    positions.push({ x: fullPositions[idx].x, y: fullPositions[idx].y, angle: Math.round(-90 + (360 / count) * i) });
+                }
+            } else {
+                // Fallback: elliptical positioning for more than 20
+                const marginX = 8;
+                const marginY = 28;
+                const radiusX = 50 + marginX;
+                const radiusY = 50 + marginY;
+                for (let i = 0; i < count; i++) {
+                    const angle = (-90 + (360 / count) * i) * (Math.PI / 180);
+                    const x = 50 + radiusX * Math.cos(angle);
+                    const y = 50 + radiusY * Math.sin(angle);
+                    positions.push({ x, y, angle: Math.round(-90 + (360 / count) * i) });
+                }
+            }
+            return positions;
+        }
+        
+        function render() {
+            const count = participants.length;
+            // Use custom positions if available, otherwise auto-calculate
+            let positions;
+            if (customPositions && customPositions.length === count) {
+                positions = customPositions.map((cp, i) => ({
+                    x: cp.x,
+                    y: cp.y,
+                    angle: Math.round(-90 + (360 / count) * i)
+                }));
+            } else {
+                positions = calculateAutoPositions(count);
+            }
+            
+            // Clear debug elements
+            table.querySelectorAll('.guide-line, .angle-label').forEach(el => el.remove());
+            
+            // Clear participants from table (keep table-center)
+            const existingWrappers = table.querySelectorAll('.participant-wrapper');
+            existingWrappers.forEach(w => w.remove());
+            
+            // Detect overlaps
+            const overlaps = showOverlaps.checked ? detectOverlaps(positions) : new Map();
+            
+            // Draw guide lines
+            if (showGuides.checked) {
+                positions.forEach((pos, i) => {
+                    const lineWrapper = document.createElement('div');
+                    lineWrapper.className = 'guide-line';
+                    lineWrapper.dataset.index = i;
+                    
+                    // Calculate angle and length from center to participant
+                    const dx = pos.x - 50;
+                    const dy = pos.y - 50;
+                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    const length = Math.sqrt(dx * dx + dy * dy) * (table.offsetWidth / 100);
+                    
+                    lineWrapper.style.width = `${length}px`;
+                    lineWrapper.style.transform = `rotate(${angle}deg)`;
+                    
+                    // Add draggable handle at the end of the line
+                    const handle = document.createElement('div');
+                    handle.className = 'guide-line-handle';
+                    handle.dataset.index = i;
+                    lineWrapper.appendChild(handle);
+                    
+                    // Make handle draggable in edit mode
+                    if (editMode.checked) {
+                        handle.addEventListener('mousedown', (e) => startGuideDrag(e, i));
+                    }
+                    
+                    table.appendChild(lineWrapper);
+                });
+            }
+            
+            // Show angle labels
+            if (showAngles.checked) {
+                positions.forEach((pos, i) => {
+                    const label = document.createElement('div');
+                    label.className = 'angle-label';
+                    label.textContent = `${pos.angle}°`;
+                    label.style.left = `${pos.x}%`;
+                    label.style.top = `${pos.y}%`;
+                    label.style.transform = 'translate(-50%, calc(-50% + 40px))';
+                    table.appendChild(label);
+                });
+            }
+            
+            // Render participants
+            participants.forEach((person, index) => {
+                const pos = positions[index];
+                const angle = (-90 + (360 / count) * index);
+                const normalizedAngle = ((angle % 360) + 360) % 360;
+                let sideClass = "";
+                if (normalizedAngle >= 315 || normalizedAngle < 45) sideClass = "right-side";
+                else if (normalizedAngle >= 45 && normalizedAngle < 135) sideClass = "bottom-side";
+                else if (normalizedAngle >= 135 && normalizedAngle < 225) sideClass = "left-side";
+                else sideClass = "top-side";
+                
+                const initials = person.name.charAt(0);
+                
+                let voteDisplay = '';
+                if (revealed && person.vote) {
+                    if (person.voteChanged) {
+                        voteDisplay = `<span class="vote-value"><span class="vote-initial">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`;
+                    } else {
+                        voteDisplay = `<span class="vote-value">${person.vote}</span>`;
+                    }
+                } else if (person.vote) {
+                    voteDisplay = `<span class="participant-state">Voted ✓</span>`;
+                } else {
+                    voteDisplay = `<span class="participant-state">Thinking…</span>`;
+                }
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = `participant-wrapper ${sideClass}`;
+                wrapper.style.left = `${pos.x}%`;
+                wrapper.style.top = `${pos.y}%`;
+                
+                const overlapCount = overlaps.get(index) || 0;
+                const participantClass = `participant ${person.vote ? 'voted' : ''} ${person.voteChanged ? 'vote-modified' : ''} ${overlapCount > 0 ? 'overlapping' : ''}`;
+                
+                let overlapBadge = '';
+                if (overlapCount > 0) {
+                    overlapBadge = `<div class="overlap-count">${overlapCount}</div>`;
+                }
+                
+                wrapper.innerHTML = `
+                    <div class="${participantClass}" style="position:relative;">
+                        <span class="avatar">${initials}</span>
+                        ${voteDisplay}
+                        ${overlapBadge}
+                    </div>
+                    <span class="participant-name">${person.name}</span>
+                `;
+                
+                // In edit mode, enable drag; otherwise, click to change vote
+                const participantEl = wrapper.querySelector('.participant');
+                if (editMode.checked) {
+                    participantEl.addEventListener('mousedown', (e) => startDrag(e, index));
+                } else {
+                    participantEl.addEventListener('click', () => changeVote(index));
+                }
+                table.appendChild(wrapper);
+            });
+            
+            // Toggle edit-mode class on table container
+            const container = table.parentElement;
+            if (editMode.checked) {
+                container.classList.add('edit-mode');
+            } else {
+                container.classList.remove('edit-mode');
+            }
+            
+            // Update debug info table
+            if (showDebugInfo.checked) {
+                debugInfoEl.classList.remove('hidden');
+                const overlapCount = Array.from(overlaps.values()).filter(v => v > 0).length;
+                const modeLabel = customPositions ? '<strong style="color:#ff9a6b;"> (personalizado)</strong>' : ' (auto)';
+                let html = `<strong>Posições:</strong> ${count} participantes${modeLabel} | <strong class="${overlapCount > 0 ? 'overlap' : ''}">${overlapCount} sobreposições</strong>`;
+                html += '<table><tr><th>#</th><th>Nome</th><th>X (%)</th><th>Y (%)</th><th>Sobreposição</th></tr>';
+                participants.forEach((person, i) => {
+                    const pos = positions[i];
+                    const ov = overlaps.get(i) || 0;
+                    html += `<tr><td>${i + 1}</td><td>${person.name}</td><td>${pos.x.toFixed(1)}</td><td>${pos.y.toFixed(1)}</td><td class="${ov > 0 ? 'overlap' : ''}">${ov > 0 ? ov + ' ⚠️' : '✓'}</td></tr>`;
+                });
+                html += '</table>';
+                debugInfoEl.innerHTML = html;
+            } else {
+                debugInfoEl.classList.add('hidden');
+            }
+        }
+        
+        countInput.addEventListener('input', () => {
+            const count = parseInt(countInput.value);
+            countDisplay.textContent = count;
+            initParticipants(count);
+        });
+        
+        document.getElementById('vote-random').addEventListener('click', randomVote);
+        document.getElementById('reveal').addEventListener('click', revealVotes);
+        document.getElementById('reset').addEventListener('click', resetVotes);
+        
+        // Debug controls - re-render when toggled
+        [showGuides, showAngles, showOverlaps, showDebugInfo, editMode].forEach(cb => {
+            cb.addEventListener('change', render);
+        });
+        
+        // Drag and drop functionality for participants
+        function startDrag(e, index) {
+            if (!editMode.checked) return;
+            e.preventDefault();
+            dragIndex = index;
+            
+            const wrapper = table.querySelectorAll('.participant-wrapper')[index];
+            const rect = table.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left - (parseFloat(wrapper.style.left) / 100 * rect.width);
+            dragOffsetY = e.clientY - rect.top - (parseFloat(wrapper.style.top) / 100 * rect.height);
+            
+            // Visual feedback
+            wrapper.querySelector('.participant').classList.add('dragging');
+            
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+        
+        function onDrag(e) {
+            if (dragIndex < 0) return;
+            const rect = table.getBoundingClientRect();
+            const xPercent = ((e.clientX - rect.left - dragOffsetX) / rect.width) * 100;
+            const yPercent = ((e.clientY - rect.top - dragOffsetY) / rect.height) * 100;
+            
+            // Ensure customPositions exists
+            if (!customPositions) {
+                customPositions = calculateAutoPositions(participants.length);
+            }
+            
+            customPositions[dragIndex] = { x: xPercent, y: yPercent };
+            render();
+        }
+        
+        function stopDrag() {
+            if (dragIndex >= 0) {
+                const wrappers = table.querySelectorAll('.participant-wrapper');
+                if (wrappers[dragIndex]) {
+                    wrappers[dragIndex].querySelector('.participant').classList.remove('dragging');
+                }
+            }
+            dragIndex = -1;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+        
+        // Drag and drop functionality for guide lines
+        let guideDragIndex = -1;
+        
+        function startGuideDrag(e, index) {
+            if (!editMode.checked) return;
+            e.preventDefault();
+            e.stopPropagation();
+            guideDragIndex = index;
+            
+            // Visual feedback
+            const lines = table.querySelectorAll('.guide-line');
+            if (lines[index]) {
+                lines[index].classList.add('dragging');
+            }
+            
+            document.addEventListener('mousemove', onGuideDrag);
+            document.addEventListener('mouseup', stopGuideDrag);
+        }
+        
+        function onGuideDrag(e) {
+            if (guideDragIndex < 0) return;
+            const rect = table.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            // Calculate position relative to table center
+            const dx = e.clientX - centerX;
+            const dy = e.clientY - centerY;
+            
+            // Convert to percentage
+            const xPercent = 50 + (dx / rect.width) * 100;
+            const yPercent = 50 + (dy / rect.height) * 100;
+            
+            // Ensure customPositions exists
+            if (!customPositions) {
+                customPositions = calculateAutoPositions(participants.length);
+            }
+            
+            customPositions[guideDragIndex] = { x: xPercent, y: yPercent };
+            render();
+        }
+        
+        function stopGuideDrag() {
+            if (guideDragIndex >= 0) {
+                const lines = table.querySelectorAll('.guide-line');
+                if (lines[guideDragIndex]) {
+                    lines[guideDragIndex].classList.remove('dragging');
+                }
+            }
+            guideDragIndex = -1;
+            document.removeEventListener('mousemove', onGuideDrag);
+            document.removeEventListener('mouseup', stopGuideDrag);
+        }
+        
+        // Export positions
+        document.getElementById('export-positions').addEventListener('click', () => {
+            const count = participants.length;
+            let positions;
+            if (customPositions && customPositions.length === count) {
+                positions = customPositions;
+            } else {
+                positions = calculateAutoPositions(count);
+            }
+            
+            const exportData = {
+                count: count,
+                positions: positions.map((pos, i) => ({
+                    index: i,
+                    name: participants[i].name,
+                    x: Math.round(pos.x * 100) / 100,
+                    y: Math.round(pos.y * 100) / 100
+                }))
+            };
+            
+            const json = JSON.stringify(exportData, null, 2);
+            const exportArea = document.getElementById('export-area');
+            const exportText = document.getElementById('export-text');
+            exportArea.classList.remove('hidden');
+            exportText.value = json;
+        });
+        
+        // Copy to clipboard
+        document.getElementById('copy-export').addEventListener('click', () => {
+            const exportText = document.getElementById('export-text');
+            exportText.select();
+            navigator.clipboard.writeText(exportText.value).then(() => {
+                const btn = document.getElementById('copy-export');
+                btn.textContent = '✅ Copiado!';
+                setTimeout(() => { btn.textContent = '📋 Copiar para clipboard'; }, 2000);
+            });
+        });
+        
+        // Reset positions to auto-calculate
+        document.getElementById('reset-positions').addEventListener('click', () => {
+            customPositions = null;
+            render();
+        });
+        
+        // Initialize with 4 participants
+        initParticipants(4);
+    </script>
+</body>
+</html>

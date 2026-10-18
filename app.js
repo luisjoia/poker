@@ -59,8 +59,8 @@ function roomKey(code) { return `estima-room-${code}`; }
 function getDemoRoom(code) { return JSON.parse(localStorage.getItem(roomKey(code)) || "null"); }
 function saveDemoRoom(room) { localStorage.setItem(roomKey(room.code), JSON.stringify(room)); state.demoChannel?.postMessage(room); render(room); }
 
-async function createRoom(name, title) {
-  const room = { code: newCode(), title: title.trim() || "New team", revealed: false, round: 1, creator: state.uid, participants: {} };
+async function createRoom(name) {
+  const room = { code: newCode(), title: "New team", revealed: false, round: 1, creator: state.uid, participants: {} };
   room.participants[state.uid] = { name, vote: null };
   if (firebaseReady) {
     console.log("[CreateRoom] Writing to Firestore, room code:", room.code);
@@ -99,6 +99,7 @@ async function joinRoom(code, name) {
 async function enterRoom(code) {
   state.room = code;
   $("#landing-view").classList.add("hidden"); $("#room-view").classList.remove("hidden");
+  document.querySelector(".shell").classList.add("room-active");
   history.replaceState({}, "", `?room=${encodeURIComponent(code)}`);
   if (firebaseReady) {
     state.unsubscribe?.();
@@ -119,42 +120,175 @@ function render(room) {
   if (!room) return;
   state.round = room.round;
   // A vote only belongs to the current round. Old votes stay in Firestore but are ignored.
-  const people = Object.entries(room.participants || {}).map(([id, person]) => ({
-    id,
-    ...person,
-    vote: person.voteRound === room.round ? person.vote : null
-  }));
+  const people = Object.entries(room.participants || {}).map(([id, person]) => {
+    const currentVote = person.voteRound === room.round ? person.vote : null;
+    const initialVote = person.initialVoteRound === room.round ? person.initialVote : null;
+    const voteChanged = person.voteChangedRound === room.round;
+    return {
+      id,
+      ...person,
+      vote: currentVote,
+      initialVote: initialVote,
+      voteChanged: voteChanged
+    };
+  });
   const mine = people.find(person => person.id === state.uid);
   const isCreator = room.creator === state.uid;
-  $("#room-title-display").textContent = room.title;
   $("#copy-code").textContent = room.code;
   $("#round-label").textContent = `ROUND ${String(room.round).padStart(2, "0")}`;
   $("#round-heading").textContent = room.revealed ? "The team has revealed the cards" : "Choose your estimate";
-  $("#round-subtitle").textContent = room.revealed ? "Any participant can start a new round." : "Votes stay private until someone reveals the cards.";
+  $("#round-subtitle").textContent = room.revealed ? "You can change your vote once." : "Votes stay private until someone reveals the cards.";
   $("#vote-state").textContent = mine?.vote ? `You chose ${mine.vote}` : "You have not voted yet";
-  $("#participants").innerHTML = people.map(person => `<article class="participant ${person.vote ? "voted" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${room.revealed && person.vote ? `<span class="vote-value">${person.vote}</span>` : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`}</article>`).join("");
-  $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}" ${room.revealed ? "disabled" : ""}>${card}</button>`).join("");
+
+  // Render participants around the table
+  renderTableParticipants(people, room);
+  // Render revealed votes in the center of the table
+  renderTableCenter(people, room);
+
+  // Keep old participants list for stats (hidden)
+  $("#participants").innerHTML = people.map(person => {
+    const voteDisplay = room.revealed && person.vote
+      ? person.voteChanged
+        ? `<span class="vote-value"><span class="vote-initial" title="Initial vote">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`
+        : `<span class="vote-value">${person.vote}</span>`
+      : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
+    return `<article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${voteDisplay}</article>`;
+  }).join("");
+  $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}"><span class="card-center">${card}</span></button>`).join("");
   $("#result-panel").classList.toggle("hidden", !room.revealed);
   $("#reveal-button").classList.toggle("hidden", room.revealed || !isCreator);
   $("#reset-button").classList.toggle("hidden", !isCreator);
   if (room.revealed) renderStats(people);
 }
+
+// Position participants around the round table using circular angles
+function renderTableParticipants(people, room) {
+  const container = $("#table-participants");
+  const count = people.length;
+  if (count === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  // Custom positions for 20 participants (manually adjusted to avoid overlaps)
+  // For fewer participants, select a uniform subset of these positions
+  const fullPositions = [
+    { x: 51.14, y: -15.5 }, { x: 68.92, y: -15.25 }, { x: 84.09, y: -13.1 },
+    { x: 94.78, y: -9.78 }, { x: 103.88, y: 15.9 }, { x: 107.86, y: 51.79 },
+    { x: 105.73, y: 91.25 }, { x: 94.78, y: 111.56 }, { x: 84.09, y: 113.1 },
+    { x: 68.07, y: 118.47 }, { x: 48.86, y: 118.71 }, { x: 32.08, y: 118.11 },
+    { x: 17.48, y: 117.03 }, { x: 5.65, y: 105.49 }, { x: -4.16, y: 86.6 },
+    { x: -6, y: 50 }, { x: -4.02, y: 13.75 }, { x: 6.22, y: -7.63 },
+    { x: 15.91, y: -13.1 }, { x: 33.36, y: -14.9 }
+  ];
+  const positions = [];
+  if (count <= 20) {
+    // Select a uniform subset of the 20 positions, ensuring even distribution
+    const used = new Set();
+    for (let i = 0; i < count; i++) {
+      const idx = Math.floor((i * 20) / count) % 20;
+      // If this index is already used, find the next available one
+      let attempts = 0;
+      while (used.has(idx) && attempts < 20) {
+        idx = (idx + 1) % 20;
+        attempts++;
+      }
+      used.add(idx);
+      positions.push(fullPositions[idx]);
+    }
+  } else {
+    // Fallback: elliptical positioning for more than 20
+    const marginX = 8;
+    const marginY = 28;
+    const radiusX = 50 + marginX;
+    const radiusY = 50 + marginY;
+    for (let i = 0; i < count; i++) {
+      const angle = (-90 + (360 / count) * i) * (Math.PI / 180);
+      const x = 50 + radiusX * Math.cos(angle);
+      const y = 50 + radiusY * Math.sin(angle);
+      positions.push({ x, y });
+    }
+  }
+
+  container.innerHTML = people.map((person, index) => {
+    const pos = positions[index];
+    const angle = (-90 + (360 / count) * index);
+    // Determine which side of the table the participant is on
+    let sideClass = "";
+    const normalizedAngle = ((angle % 360) + 360) % 360;
+    if (normalizedAngle >= 315 || normalizedAngle < 45) sideClass = "right-side";
+    else if (normalizedAngle >= 45 && normalizedAngle < 135) sideClass = "bottom-side";
+    else if (normalizedAngle >= 135 && normalizedAngle < 225) sideClass = "left-side";
+    else sideClass = "top-side";
+
+    const voteDisplay = room.revealed && person.vote
+      ? person.voteChanged
+        ? `<span class="vote-value"><span class="vote-initial" title="Initial vote">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`
+        : `<span class="vote-value">${person.vote}</span>`
+      : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
+    return `<div class="participant-wrapper ${sideClass}" style="left:${pos.x}%;top:${pos.y}%">
+      <article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}">
+        <span class="avatar">${initials(person.name)}</span>
+        ${voteDisplay}
+      </article>
+      <span class="participant-name">${escapeHtml(person.name)}</span>
+    </div>`;
+  }).join("");
+}
+
+// Keep only stats in the center of the table, no individual vote cards
+function renderTableCenter(people, room) {
+}
 function escapeHtml(text) { const node = document.createElement("span"); node.textContent = text; return node.innerHTML; }
 function renderStats(people) {
-  const values = people.filter(person => numericCards.has(person.vote)).map(person => person.vote === "½" ? .5 : Number(person.vote)).sort((a,b) => a-b);
+  const votes = people.filter(person => numericCards.has(person.vote)).map(person => person.vote);
+  const values = votes.map(v => Number(v)).sort((a,b) => a-b);
   const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-  const median = values.length ? values.length % 2 ? values[(values.length - 1) / 2] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2 : null;
+  // Calculate mode (most voted value)
+  const mode = votes.length ? Object.entries(votes.reduce((counts, v) => { counts[v] = (counts[v] || 0) + 1; return counts; }, {})).sort((a,b) => b[1] - a[1])[0][0] : null;
   const fmt = value => value === null ? "—" : String(value).replace(".5", ",5");
-  $("#stats").innerHTML = [["Average", fmt(average && +average.toFixed(1))], ["Median", fmt(median)], ["Minimum", fmt(values[0] ?? null)], ["Maximum", fmt(values.at(-1) ?? null)]].map(([label, value]) => `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`).join("");
+  // Most voted highlighted in center, other stats below
+  const modeValue = fmt(mode);
+  const infoStats = [["Average", fmt(average && +average.toFixed(1))], ["Highest", fmt(values.at(-1) ?? null)], ["Lowest", fmt(values[0] ?? null)]];
+  $("#stats").innerHTML = `<div class="stat most-voted"><span>MOST VOTED</span><strong>${modeValue}</strong></div><div class="info-stats">${infoStats.map(([label, value]) => `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`).join("")}</div>`;
 }
 async function vote(card) {
   const room = firebaseReady ? null : getDemoRoom(state.room);
   const round = room?.round ?? state.round;
+  // Get current participant data and room revealed state from Firebase or demo storage
+  let me;
+  let revealed = false;
   if (firebaseReady) {
-    await firebaseApi.setDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid), { vote: card, voteRound: round }, { merge: true });
+    const [participantSnap, roomSnap] = await Promise.all([
+      firebaseApi.getDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid)),
+      firebaseApi.getDoc(firebaseApi.doc(firestore, "rooms", state.room))
+    ]);
+    me = participantSnap.exists() ? participantSnap.data() : null;
+    revealed = roomSnap.exists() ? (roomSnap.data().revealed ?? false) : false;
   } else {
-    room.participants[state.uid].vote = card;
-    room.participants[state.uid].voteRound = round;
+    me = room?.participants?.[state.uid];
+    revealed = room?.revealed ?? false;
+  }
+  // After reveal, allow only one vote change; before reveal, allow unlimited changes
+  if (revealed && me && me.voteChangedRound === round) {
+    showToast("You can only change your vote once per round.");
+    return;
+  }
+  // Save the initial vote the first time a person votes in a round
+  const hasVotedBefore = me && me.voteRound === round;
+  const payload = { vote: card, voteRound: round };
+  if (!hasVotedBefore) {
+    payload.initialVote = card;
+    payload.initialVoteRound = round;
+    payload.voteChangedRound = null;
+  } else if (revealed && card !== me.initialVote) {
+    // This is a change from the initial vote (only tracked after reveal)
+    payload.voteChangedRound = round;
+  }
+  if (firebaseReady) {
+    await firebaseApi.setDoc(firebaseApi.doc(firestore, "rooms", state.room, "participants", state.uid), payload, { merge: true });
+  } else {
+    Object.assign(room.participants[state.uid], payload);
     saveDemoRoom(room);
   }
 }
@@ -186,16 +320,21 @@ async function resetRound() {
     room.round += 1;
     saveDemoRoom(room);
   }
+  // Hide the result panel to clear the table
+  $("#result-panel").classList.add("hidden");
 }
 
-$("#create-form").addEventListener("submit", event => { event.preventDefault(); createRoom($("#create-name").value.trim(), $("#room-title").value); });
+$("#create-form").addEventListener("submit", event => { event.preventDefault(); createRoom($("#create-name").value.trim()); });
 $("#join-form").addEventListener("submit", event => { event.preventDefault(); joinRoom($("#room-code").value, $("#join-name").value.trim()); });
 $("#cards").addEventListener("click", event => { const card = event.target.closest("[data-card]")?.dataset.card; if (card) vote(card); });
 $("#reveal-button").addEventListener("click", reveal); $("#reset-button").addEventListener("click", resetRound);
 $("#copy-code").addEventListener("click", async () => { await navigator.clipboard.writeText(state.room); showToast("Room code copied."); });
-$("#leave-room").addEventListener("click", () => { state.unsubscribe?.(); state.demoChannel?.close(); history.replaceState({}, "", location.pathname); location.reload(); });
+$("#leave-room").addEventListener("click", () => { state.unsubscribe?.(); state.demoChannel?.close(); document.querySelector(".shell").classList.remove("room-active"); history.replaceState({}, "", location.pathname); location.reload(); });
 
 const urlRoom = new URLSearchParams(location.search).get("room");
+// Auto-uppercase room code input
+$("#room-code").addEventListener("input", e => e.target.value = e.target.value.toUpperCase());
+
 if (urlRoom) {
   $("#room-code").value = urlRoom;
   $("#join-name").focus();
@@ -208,3 +347,30 @@ $("#show-create").addEventListener("click", () => {
   $("#show-create").classList.add("hidden");
   $("#create-name").focus();
 });
+
+// Theme toggle: cycles through light → dark → light
+const themes = ["light", "dark"];
+const themeIcons = { light: "🌙", dark: "☀️" };
+const themeLabels = { light: "Dark", dark: "Light" };
+const setTheme = (theme) => {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+  document.querySelectorAll(".theme-toggle").forEach(btn => {
+    btn.querySelector(".icon").textContent = themeIcons[theme];
+    btn.querySelector(".label").textContent = themeLabels[theme];
+  });
+};
+const toggleTheme = () => {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  const nextIndex = (themes.indexOf(current) + 1) % themes.length;
+  setTheme(themes[nextIndex]);
+};
+// Restore saved theme or respect system preference
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme) {
+  setTheme(savedTheme);
+} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  setTheme("dark");
+}
+$("#theme-toggle-landing").addEventListener("click", toggleTheme);
+$("#theme-toggle-room").addEventListener("click", toggleTheme);
