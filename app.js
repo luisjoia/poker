@@ -155,14 +155,13 @@ function render(room) {
     return `<article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}"><span class="avatar">${initials(person.name)}</span><span class="participant-name">${escapeHtml(person.name)}</span>${voteDisplay}</article>`;
   }).join("");
   $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}"><span class="card-center">${card}</span></button>`).join("");
-  // Result panel commented in HTML for future editing
-  // $("#result-panel").classList.toggle("hidden", !room.revealed);
+  $("#result-panel").classList.toggle("hidden", !room.revealed);
   $("#reveal-button").classList.toggle("hidden", room.revealed || !isCreator);
   $("#reset-button").classList.toggle("hidden", !isCreator);
   if (room.revealed) renderStats(people);
 }
 
-// Position participants around the table in a circular layout
+// Position participants around the round table using circular angles
 function renderTableParticipants(people, room) {
   const container = $("#table-participants");
   const count = people.length;
@@ -171,62 +170,87 @@ function renderTableParticipants(people, room) {
     return;
   }
 
-  // Calculate positions around the table
-  // Top row: ceil(count/2), Bottom row: floor(count/2)
-  const topCount = Math.ceil(count / 2);
-  const bottomCount = count - topCount;
-
+  // Custom positions for 20 participants (manually adjusted to avoid overlaps)
+  // For fewer participants, select a uniform subset of these positions
+  const fullPositions = [
+    { x: 51.14, y: -15.5 }, { x: 68.92, y: -15.25 }, { x: 84.09, y: -13.1 },
+    { x: 94.78, y: -9.78 }, { x: 103.88, y: 15.9 }, { x: 107.86, y: 51.79 },
+    { x: 105.73, y: 91.25 }, { x: 94.78, y: 111.56 }, { x: 84.09, y: 113.1 },
+    { x: 68.07, y: 118.47 }, { x: 48.86, y: 118.71 }, { x: 32.08, y: 118.11 },
+    { x: 17.48, y: 117.03 }, { x: 5.65, y: 105.49 }, { x: -4.16, y: 86.6 },
+    { x: -6, y: 50 }, { x: -4.02, y: 13.75 }, { x: 6.22, y: -7.63 },
+    { x: 15.91, y: -13.1 }, { x: 33.36, y: -14.9 }
+  ];
   const positions = [];
-  // Top row (above the table, y ~ -40px)
-  for (let i = 0; i < topCount; i++) {
-    const xPercent = count > 1 ? 15 + (i / Math.max(topCount - 1, 1)) * 70 : 50;
-    positions.push({ x: xPercent, y: -40 });
-  }
-  // Bottom row (below the table, y ~ 105%)
-  for (let i = 0; i < bottomCount; i++) {
-    const xPercent = count > 1 ? 15 + (i / Math.max(bottomCount - 1, 1)) * 70 : 50;
-    positions.push({ x: xPercent, y: 105 });
+  if (count <= 20) {
+    // Select a uniform subset of the 20 positions, ensuring even distribution
+    const used = new Set();
+    for (let i = 0; i < count; i++) {
+      const idx = Math.floor((i * 20) / count) % 20;
+      // If this index is already used, find the next available one
+      let attempts = 0;
+      while (used.has(idx) && attempts < 20) {
+        idx = (idx + 1) % 20;
+        attempts++;
+      }
+      used.add(idx);
+      positions.push(fullPositions[idx]);
+    }
+  } else {
+    // Fallback: elliptical positioning for more than 20
+    const marginX = 8;
+    const marginY = 28;
+    const radiusX = 50 + marginX;
+    const radiusY = 50 + marginY;
+    for (let i = 0; i < count; i++) {
+      const angle = (-90 + (360 / count) * i) * (Math.PI / 180);
+      const x = 50 + radiusX * Math.cos(angle);
+      const y = 50 + radiusY * Math.sin(angle);
+      positions.push({ x, y });
+    }
   }
 
   container.innerHTML = people.map((person, index) => {
     const pos = positions[index];
+    const angle = (-90 + (360 / count) * index);
+    // Determine which side of the table the participant is on
+    let sideClass = "";
+    const normalizedAngle = ((angle % 360) + 360) % 360;
+    if (normalizedAngle >= 315 || normalizedAngle < 45) sideClass = "right-side";
+    else if (normalizedAngle >= 45 && normalizedAngle < 135) sideClass = "bottom-side";
+    else if (normalizedAngle >= 135 && normalizedAngle < 225) sideClass = "left-side";
+    else sideClass = "top-side";
+
     const voteDisplay = room.revealed && person.vote
       ? person.voteChanged
         ? `<span class="vote-value"><span class="vote-initial" title="Initial vote">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`
         : `<span class="vote-value">${person.vote}</span>`
       : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
-    return `<article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}" style="left:${pos.x}%;top:${pos.y}%;transform:translate(-50%,-50%)">
-      <span class="avatar">${initials(person.name)}</span>
+    return `<div class="participant-wrapper ${sideClass}" style="left:${pos.x}%;top:${pos.y}%">
+      <article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}">
+        <span class="avatar">${initials(person.name)}</span>
+        ${voteDisplay}
+      </article>
       <span class="participant-name">${escapeHtml(person.name)}</span>
-      ${voteDisplay}
-    </article>`;
-  }).join("");
-}
-
-// Render revealed vote cards in the center of the table
-function renderTableCenter(people, room) {
-  const center = $("#table-center");
-  if (!room.revealed) {
-    center.innerHTML = "";
-    return;
-  }
-
-  const votedPeople = people.filter(person => person.vote);
-  center.innerHTML = votedPeople.map(person => {
-    const nameInitial = person.name.charAt(0).toUpperCase();
-    return `<div class="revealed-card" title="${escapeHtml(person.name)}: ${person.vote}" style="position:relative">
-      <span style="position:absolute;top:-12px;left:-12px;width:32px;height:32px;border-radius:50%;background:var(--avatar-bg);color:var(--moss);font-size:12px;font-weight:800;display:grid;place-items:center">${nameInitial}</span>
-      ${person.vote}
     </div>`;
   }).join("");
 }
+
+// Keep only stats in the center of the table, no individual vote cards
+function renderTableCenter(people, room) {
+}
 function escapeHtml(text) { const node = document.createElement("span"); node.textContent = text; return node.innerHTML; }
 function renderStats(people) {
-  const values = people.filter(person => numericCards.has(person.vote)).map(person => person.vote === "½" ? .5 : Number(person.vote)).sort((a,b) => a-b);
+  const votes = people.filter(person => numericCards.has(person.vote)).map(person => person.vote);
+  const values = votes.map(v => Number(v)).sort((a,b) => a-b);
   const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-  const median = values.length ? values.length % 2 ? values[(values.length - 1) / 2] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2 : null;
+  // Calculate mode (most voted value)
+  const mode = votes.length ? Object.entries(votes.reduce((counts, v) => { counts[v] = (counts[v] || 0) + 1; return counts; }, {})).sort((a,b) => b[1] - a[1])[0][0] : null;
   const fmt = value => value === null ? "—" : String(value).replace(".5", ",5");
-  $("#stats").innerHTML = [["Average", fmt(average && +average.toFixed(1))], ["Median", fmt(median)], ["Minimum", fmt(values[0] ?? null)], ["Maximum", fmt(values.at(-1) ?? null)]].map(([label, value]) => `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`).join("");
+  // Most voted highlighted in center, other stats below
+  const modeValue = fmt(mode);
+  const infoStats = [["Average", fmt(average && +average.toFixed(1))], ["Highest", fmt(values.at(-1) ?? null)], ["Lowest", fmt(values[0] ?? null)]];
+  $("#stats").innerHTML = `<div class="stat most-voted"><span>MOST VOTED</span><strong>${modeValue}</strong></div><div class="info-stats">${infoStats.map(([label, value]) => `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`).join("")}</div>`;
 }
 async function vote(card) {
   const room = firebaseReady ? null : getDemoRoom(state.room);
@@ -296,6 +320,8 @@ async function resetRound() {
     room.round += 1;
     saveDemoRoom(room);
   }
+  // Hide the result panel to clear the table
+  $("#result-panel").classList.add("hidden");
 }
 
 $("#create-form").addEventListener("submit", event => { event.preventDefault(); createRoom($("#create-name").value.trim()); });

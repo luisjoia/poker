@@ -56,9 +56,14 @@
             <h2 id="round-heading">Choose your estimate</h2>
             <p id="round-subtitle">Votes stay private until someone reveals the cards.</p>
         </section>
+        <!-- Oval poker table: participants positioned around the perimeter, revealed votes in center -->
         <section class="table-container">
             <div class="table-surface" id="table-surface">
-                <div class="table-center" id="table-center"></div>
+                <div class="table-center" id="table-center">
+                    <section id="result-panel" class="result-panel hidden">
+                        <div id="stats" class="stats"></div>
+                    </section>
+                </div>
                 <div class="table-participants" id="table-participants"></div>
             </div>
         </section>
@@ -67,12 +72,6 @@
             <div class="table-title"><span>Your vote</span><span id="vote-state">You have not voted yet</span></div>
             <div id="cards" class="cards" aria-label="Cartas de estimativa"></div>
         </section>
-        <!-- Result panel commented for future editing
-        <section id="result-panel" class="result-panel hidden">
-            <div class="result-heading"><div><p class="eyebrow">ROUND RESULT</p><h3>Cards revealed</h3></div><span class="revealed-badge">Revealed</span></div>
-            <div id="stats" class="stats"></div>
-        </section>
-        -->
         <section class="room-actions">
             <button id="reveal-button" class="secondary-button">Reveal cards</button>
             <button id="reset-button" class="reset-button">New round <span>↻</span></button>
