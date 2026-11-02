@@ -58,13 +58,14 @@
         </section>
         <!-- Oval poker table: participants positioned around the perimeter, revealed votes in center -->
         <section class="table-container">
+            <div class="table-participants" id="table-participants"></div>
             <div class="table-surface" id="table-surface">
                 <div class="table-center" id="table-center">
                     <section id="result-panel" class="result-panel hidden">
+                        <p id="draw-state" class="draw-state hidden" role="status" aria-live="polite">Draw</p>
                         <div id="stats" class="stats"></div>
                     </section>
                 </div>
-                <div class="table-participants" id="table-participants"></div>
             </div>
         </section>
         <section id="participants" class="participants" aria-label="Participantes" style="display:none"></section>

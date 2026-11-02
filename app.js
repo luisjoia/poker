@@ -1,3 +1,5 @@
+import { seatLayoutProfiles } from "./seat-layouts.js";
+
 // Firebase web app settings. Authentication and Firestore are loaded below.
 // The API key placeholder is replaced by build.js during deployment.
 const firebaseConfig = {
@@ -13,8 +15,9 @@ const firebaseConfig = {
 const cards = ["1", "2", "3", "5", "8", "13", "21", "?"];
 const numericCards = new Set(["1", "2", "3", "5", "8", "13", "21"]);
 const firebaseReady = !Object.values(firebaseConfig).some(value => typeof value === "string" && (value.startsWith("__") || value.startsWith("REPLACE_")));
-const state = { room: null, round: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null };
+const state = { room: null, round: null, uid: crypto.randomUUID(), unsubscribe: null, demoChannel: null, seatAssignments: null };
 const $ = selector => document.querySelector(selector);
+let lastTableLayout = null;
 
 console.log("[Firebase] Config API key:", firebaseConfig.apiKey);
 console.log("[Firebase] firebaseReady:", firebaseReady);
@@ -156,77 +159,83 @@ function render(room) {
   }).join("");
   $("#cards").innerHTML = cards.map(card => `<button class="card ${mine?.vote === card ? "selected" : ""}" data-card="${card}"><span class="card-center">${card}</span></button>`).join("");
   $("#result-panel").classList.toggle("hidden", !room.revealed);
+  $("#table-center").classList.toggle("revealed", room.revealed);
   $("#reveal-button").classList.toggle("hidden", room.revealed || !isCreator);
   $("#reset-button").classList.toggle("hidden", !isCreator);
   if (room.revealed) renderStats(people);
 }
 
-// Position participants around the round table using circular angles
+// Use the exported 14-seat layout nearest to the current monitor width. When
+// fewer people are present, each gets a random, unique seat that stays stable
+// through votes and real-time room updates.
 function renderTableParticipants(people, room) {
   const container = $("#table-participants");
+  const stage = $(".table-container");
+  const table = $("#table-surface");
   const count = people.length;
   if (count === 0) {
     container.innerHTML = "";
+    lastTableLayout = null;
+    state.seatAssignments = { room: state.room, byId: new Map() };
     return;
   }
 
-  // Custom positions for 20 participants (manually adjusted to avoid overlaps)
-  // For fewer participants, select a uniform subset of these positions
-  const fullPositions = [
-    { x: 51.14, y: -15.5 }, { x: 68.92, y: -15.25 }, { x: 84.09, y: -13.1 },
-    { x: 94.78, y: -9.78 }, { x: 103.88, y: 15.9 }, { x: 107.86, y: 51.79 },
-    { x: 105.73, y: 91.25 }, { x: 94.78, y: 111.56 }, { x: 84.09, y: 113.1 },
-    { x: 68.07, y: 118.47 }, { x: 48.86, y: 118.71 }, { x: 32.08, y: 118.11 },
-    { x: 17.48, y: 117.03 }, { x: 5.65, y: 105.49 }, { x: -4.16, y: 86.6 },
-    { x: -6, y: 50 }, { x: -4.02, y: 13.75 }, { x: 6.22, y: -7.63 },
-    { x: 15.91, y: -13.1 }, { x: 33.36, y: -14.9 }
-  ];
-  const positions = [];
-  if (count <= 20) {
-    // Select a uniform subset of the 20 positions, ensuring even distribution
-    const used = new Set();
-    for (let i = 0; i < count; i++) {
-      const idx = Math.floor((i * 20) / count) % 20;
-      // If this index is already used, find the next available one
-      let attempts = 0;
-      while (used.has(idx) && attempts < 20) {
-        idx = (idx + 1) % 20;
-        attempts++;
-      }
-      used.add(idx);
-      positions.push(fullPositions[idx]);
-    }
-  } else {
-    // Fallback: elliptical positioning for more than 20
-    const marginX = 8;
-    const marginY = 28;
-    const radiusX = 50 + marginX;
-    const radiusY = 50 + marginY;
-    for (let i = 0; i < count; i++) {
-      const angle = (-90 + (360 / count) * i) * (Math.PI / 180);
-      const x = 50 + radiusX * Math.cos(angle);
-      const y = 50 + radiusY * Math.sin(angle);
-      positions.push({ x, y });
-    }
+  const stageWidth = stage.clientWidth;
+  const tableWidth = Math.min(700, Math.max(100, stageWidth - 200));
+  table.style.width = `${tableWidth}px`;
+  const viewportWidth = window.innerWidth;
+  const profile = seatLayoutProfiles.reduce((closest, candidate) =>
+    Math.abs(candidate.viewportWidth - viewportWidth) < Math.abs(closest.viewportWidth - viewportWidth) ? candidate : closest
+  );
+  let stageHeight = profile.stageHeight;
+  const overflowCount = Math.max(0, count - profile.positions.length);
+  const radiusX = Math.min(stageWidth / 2 - 34, tableWidth / 2 + 64);
+  const radiusY = tableWidth / 5 + 78;
+  const extraPositions = [];
+  for (let index = 0; index < overflowCount; index++) {
+    const level = Math.floor(index / 4);
+    const side = index % 4 < 2 ? 1 : -1;
+    const vertical = index % 2 === 0 ? 1 : -1;
+    extraPositions.push({ x: stageWidth / 2 + side * radiusX, y: vertical * (radiusY + 40 + level * 110) });
+  }
+  if (extraPositions.length) {
+    const overflowExtent = Math.max(...extraPositions.map(position => Math.abs(position.y)));
+    stageHeight = Math.max(stageHeight, overflowExtent * 2 + 96);
+  }
+  const positions = profile.positions.map(([x, y]) => ({
+    x: stageWidth / 2 + (profile.stageWidth * (x / 100 - 0.5)) * ((tableWidth / 2 + 64) / (profile.tableWidth / 2 + 64)),
+    y: stageHeight / 2 + (profile.stageHeight * (y / 100 - 0.5)) * ((tableWidth / 5 + 78) / (profile.tableWidth / 5 + 78))
+  })).concat(extraPositions.map(position => ({ x: position.x, y: stageHeight / 2 + position.y })));
+  stage.style.height = `${stageHeight}px`;
+  lastTableLayout = { people, room };
+
+  if (!state.seatAssignments || state.seatAssignments.room !== state.room) {
+    state.seatAssignments = { room: state.room, byId: new Map() };
+  }
+  const activeIds = new Set(people.map(person => person.id));
+  for (const [id, slot] of state.seatAssignments.byId) {
+    if (!activeIds.has(id) || slot >= positions.length) state.seatAssignments.byId.delete(id);
+  }
+  const occupiedSlots = new Set(state.seatAssignments.byId.values());
+  const availableSlots = Array.from({ length: positions.length }, (_, index) => index)
+    .filter(index => !occupiedSlots.has(index));
+  for (const person of people) {
+    if (state.seatAssignments.byId.has(person.id)) continue;
+    const pick = Math.floor(Math.random() * availableSlots.length);
+    const slot = availableSlots.splice(pick, 1)[0];
+    state.seatAssignments.byId.set(person.id, slot);
+    occupiedSlots.add(slot);
   }
 
   container.innerHTML = people.map((person, index) => {
-    const pos = positions[index];
-    const angle = (-90 + (360 / count) * index);
-    // Determine which side of the table the participant is on
-    let sideClass = "";
-    const normalizedAngle = ((angle % 360) + 360) % 360;
-    if (normalizedAngle >= 315 || normalizedAngle < 45) sideClass = "right-side";
-    else if (normalizedAngle >= 45 && normalizedAngle < 135) sideClass = "bottom-side";
-    else if (normalizedAngle >= 135 && normalizedAngle < 225) sideClass = "left-side";
-    else sideClass = "top-side";
 
     const voteDisplay = room.revealed && person.vote
       ? person.voteChanged
         ? `<span class="vote-value"><span class="vote-initial" title="Initial vote">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`
         : `<span class="vote-value">${person.vote}</span>`
       : `<span class="participant-state">${person.vote ? "Voted ✓" : "Thinking…"}</span>`;
-    return `<div class="participant-wrapper ${sideClass}" style="left:${pos.x}%;top:${pos.y}%">
+    const pos = positions[state.seatAssignments.byId.get(person.id)];
+    return `<div class="participant-wrapper" style="left:${pos.x}px;top:${pos.y}px">
       <article class="participant ${person.vote ? "voted" : ""} ${person.voteChanged ? "vote-modified" : ""}">
         <span class="avatar">${initials(person.name)}</span>
         ${voteDisplay}
@@ -236,6 +245,12 @@ function renderTableParticipants(people, room) {
   }).join("");
 }
 
+window.addEventListener("resize", () => {
+  if (lastTableLayout && !$("#room-view").classList.contains("hidden")) {
+    renderTableParticipants(lastTableLayout.people, lastTableLayout.room);
+  }
+});
+
 // Keep only stats in the center of the table, no individual vote cards
 function renderTableCenter(people, room) {
 }
@@ -244,13 +259,32 @@ function renderStats(people) {
   const votes = people.filter(person => numericCards.has(person.vote)).map(person => person.vote);
   const values = votes.map(v => Number(v)).sort((a,b) => a-b);
   const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-  // Calculate mode (most voted value)
-  const mode = votes.length ? Object.entries(votes.reduce((counts, v) => { counts[v] = (counts[v] || 0) + 1; return counts; }, {})).sort((a,b) => b[1] - a[1])[0][0] : null;
+  const middleIndex = Math.floor(values.length / 2);
+  const median = !values.length ? null : values.length % 2
+    ? values[middleIndex]
+    : (values[middleIndex - 1] + values[middleIndex]) / 2;
+  const voteCounts = votes.reduce((counts, vote) => {
+    counts[vote] = (counts[vote] || 0) + 1;
+    return counts;
+  }, {});
+  const mostVotes = Math.max(0, ...Object.values(voteCounts));
+  const mostVotedValues = Object.entries(voteCounts)
+    .filter(([, count]) => count === mostVotes && mostVotes > 0)
+    .map(([value]) => value);
+  const isDraw = mostVotedValues.length > 1;
   const fmt = value => value === null ? "—" : String(value).replace(".5", ",5");
-  // Most voted highlighted in center, other stats below
-  const modeValue = fmt(mode);
-  const infoStats = [["Average", fmt(average && +average.toFixed(1))], ["Highest", fmt(values.at(-1) ?? null)], ["Lowest", fmt(values[0] ?? null)]];
-  $("#stats").innerHTML = `<div class="stat most-voted"><span>MOST VOTED</span><strong>${modeValue}</strong></div><div class="info-stats">${infoStats.map(([label, value]) => `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`).join("")}</div>`;
+  const drawState = $("#draw-state");
+  drawState.classList.toggle("hidden", !isDraw);
+  drawState.textContent = isDraw ? `Draw · ${mostVotedValues.join(" / ")}` : "";
+  const featuredLabel = isDraw ? "TIED VOTES" : "MOST VOTED";
+  const featuredValue = mostVotedValues.length ? mostVotedValues.join(" / ") : "—";
+  const infoStats = [
+    ["Average", fmt(average === null ? null : +average.toFixed(1))],
+    ["Median", fmt(median)],
+    ["Highest", fmt(values.at(-1) ?? null)],
+    ["Lowest", fmt(values[0] ?? null)]
+  ];
+  $("#stats").innerHTML = `<div class="preview-stats"><div class="preview-feature"><span>${featuredLabel}</span><strong>${featuredValue}</strong></div><div class="preview-info">${infoStats.map(([label, value]) => `<div class="preview-stat"><span>${label}</span><strong>${value}</strong></div>`).join("")}</div></div>`;
 }
 async function vote(card) {
   const room = firebaseReady ? null : getDemoRoom(state.room);

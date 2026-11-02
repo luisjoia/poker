@@ -1,1009 +1,532 @@
 <!doctype html>
-<html lang="pt-PT">
+<html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Teste de Reveal de Votos</title>
+    <title>Scrum Poker Seat Layout Editor</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: system-ui, sans-serif;
-            background: #1a1d1b;
-            color: #e8e6e0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            padding: 20px;
+        :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #171b18; color: #e8e6e0; }
+        * { box-sizing: border-box; }
+        body { min-width: 320px; margin: 0; padding: 20px; }
+        main { width: min(1160px, 100%); margin: auto; }
+        h1 { margin: 0 0 6px; font-size: clamp(22px, 4vw, 32px); }
+        .intro { max-width: 820px; margin: 0 0 20px; color: #a8b0a6; line-height: 1.55; }
+        .control-panel { display: flex; flex-wrap: wrap; align-items: end; gap: 14px 22px; margin-bottom: 14px; padding: 14px; border: 1px solid #3a403b; border-radius: 10px; background: #202521; }
+        .control { display: grid; gap: 7px; }
+        .control label { color: #c6d0c6; font-size: 12px; font-weight: 700; }
+        .control input { width: min(280px, 74vw); accent-color: #6bc676; }
+        output { color: #6bc676; font: 700 13px monospace; }
+        .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+        button { min-height: 36px; padding: 8px 12px; border: 1px solid #4b554d; border-radius: 6px; background: #303832; color: #e8e6e0; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+        button:hover { border-color: #6bc676; }
+        button.primary { border-color: #6bc676; background: #6bc676; color: #172019; }
+        button.danger { border-color: #ff7851; color: #ff9a6b; }
+        .help { margin: 0 0 12px; color: #9da89e; font-size: 12px; }
+        .stage-scroll { width: 100%; overflow-x: auto; padding: 4px 0 12px; }
+        .room-frame { overflow: hidden; border: 1px solid #3a403b; border-radius: 12px; background: #202521; }
+        .room-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #3a403b; font-weight: 800; }
+        .room-code { color: #6bc676; font: 700 12px monospace; }
+        .round-intro { padding: 16px 12px 0; text-align: center; }
+        .round-intro h2 { margin: 0; font-size: clamp(18px, 2.4vw, 25px); }
+        .round-intro p { margin: 5px 0 0; color: #a8b0a6; font-size: 12px; }
+        .table-stage { position: relative; width: 100%; min-height: 340px; }
+        .table-surface { position: absolute; top: 50%; left: 50%; border: 1px solid #48534a; border-radius: 999px; background: #254a36; box-shadow: inset 0 2px 12px #0007, 0 4px 16px #0005; transform: translate(-50%, -50%); }
+        .table-center { position: absolute; top: 50%; left: 50%; z-index: 2; display: grid; place-items: center; width: 74px; height: 74px; border: 1px solid #536354; border-radius: 50%; background: #1b3326; color: #d4a843; font: 700 11px monospace; transform: translate(-50%, -50%); }
+        .table-center.revealed { display: block; width: min(420px, 86%); height: auto; max-height: calc(100% - 16px); padding: 10px; border-radius: 10px; overflow: auto; text-align: center; }
+        .draw-state { display: inline-block; margin: 0 0 6px; padding: 4px 9px; border-radius: 99px; background: #303832; color: #d4a843; font: 700 10px monospace; letter-spacing: .5px; text-transform: uppercase; }
+        .preview-stats { display: grid; gap: 5px; }
+        .preview-feature { padding: 7px; border-radius: 6px; background: #d4a843; color: #172019; }
+        .preview-feature span, .preview-stat span { display: block; font-size: 8px; letter-spacing: .5px; text-transform: uppercase; }
+        .preview-feature strong { display: block; margin-top: 2px; font: 700 18px monospace; }
+        .preview-info { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+        .preview-stat { min-width: 0; padding: 5px 2px; border-radius: 5px; background: #263d2e; }
+        .preview-stat strong { display: block; margin-top: 2px; color: #d4a843; font: 700 12px monospace; }
+        .round-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 12px 0 4px; }
+        .round-controls label { display: grid; gap: 5px; color: #c6d0c6; font-size: 11px; font-weight: 700; }
+        .round-controls select { min-height: 36px; padding: 7px 10px; border: 1px solid #4b554d; border-radius: 6px; background: #202521; color: #e8e6e0; font: inherit; font-size: 12px; }
+        .round-controls button { min-width: 120px; }
+        .seat.has-voted .seat-card { border-color: #6bc676; }
+        .seats { position: absolute; inset: 0; }
+        .seat { position: absolute; display: flex; width: 76px; flex-direction: column; align-items: center; gap: 5px; transform: translate(-50%, -50%); touch-action: none; }
+        .seat-card { display: grid; place-items: center; width: 53px; height: 72px; border: 1px solid #4a574c; border-radius: 7px; background: #2a302c; box-shadow: 0 2px 6px #0007; color: #d4a843; cursor: grab; user-select: none; }
+        .seat-card:active { cursor: grabbing; }
+        .seat-card .avatar { display: grid; place-items: center; width: 22px; height: 22px; margin-bottom: 4px; border-radius: 50%; background: #3b5140; color: #d4a843; font-size: 9px; font-weight: 800; }
+        .seat-card .state { color: #a9b6a8; font-size: 7px; }
+        .seat-name { max-width: 100%; overflow: hidden; color: #e8e6e0; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+        .seat.collision .seat-card { border: 2px solid #ff7851; box-shadow: 0 0 0 3px #ff785155; }
+        .status { min-height: 22px; margin: 0 0 16px; color: #9da89e; font-size: 12px; }
+        .status .bad { color: #ff9a6b; font-weight: 800; }
+        .export-panel { margin-top: 20px; padding: 16px; border: 1px solid #3a403b; border-radius: 10px; background: #202521; }
+        .export-panel h2 { margin: 0 0 7px; font-size: 17px; }
+        .export-panel p { margin: 0 0 12px; color: #a8b0a6; font-size: 12px; line-height: 1.5; }
+        .export-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        textarea { display: block; width: 100%; min-height: 220px; padding: 10px; border: 1px solid #424b44; border-radius: 6px; background: #171b18; color: #b9e98c; font: 11px/1.45 ui-monospace, monospace; resize: vertical; }
+        @media(max-width: 650px) {
+            body { padding: 14px; }
+            .control-panel { align-items: stretch; }
+            .control { width: 100%; }
+            .control input { width: 100%; }
+            .round-controls { align-items: stretch; }
+            .round-controls label, .round-controls button { width: 100%; }
+            .seat-card { width: 46px; height: 62px; }
+            .seat-card .avatar { width: 18px; height: 18px; }
+            .seat-name { font-size: 10px; }
+            .preview-info { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        h1 { margin-bottom: 80px; font-size: 24px; }
-        .controls {
-            margin-top: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 16px;
-            justify-content: center;
-        }
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .controls label { font-size: 14px; }
-        .controls input[type="range"] {
-            width: 200px;
-            accent-color: #6bc676;
-        }
-        .controls span {
-            font-size: 18px;
-            font-weight: 700;
-            color: #6bc676;
-            min-width: 30px;
-        }
-        .controls button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            background: #6bc676;
-            color: #1a1d1b;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .controls button:hover { background: #7dd68a; }
-        .controls button.secondary {
-            background: #3a3f3b;
-            color: #e8e6e0;
-        }
-        .controls button.secondary:hover { background: #4a4f4b; }
-        .controls button.danger {
-            background: #ff7851;
-            color: #1a1d1b;
-        }
-        .controls button.danger:hover { background: #ff9a6b; }
-        .table-container {
-            position: relative;
-            margin: 40px 0 120px 0;
-        }
-        .table-surface {
-            position: relative;
-            width: min(700px, 92vw);
-            aspect-ratio: 2.5/1;
-            border-radius: 999px;
-            background: #2a2f2b;
-            border: 1px solid #3a3f3b;
-            box-shadow: 0 3px 12px #00000040, inset 0 1px 4px #00000040;
-            overflow: visible;
-        }
-        .table-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 4px;
-            padding: 6px;
-            max-width: 55%;
-            max-height: 55%;
-        }
-        .revealed-card {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 65px;
-            border-radius: 7px;
-            background: #242826;
-            border: 1px solid #3a3f3b;
-            font: 700 19px "DM Mono", monospace;
-            color: #6bc676;
-            box-shadow: 0 2px 8px #00000040;
-            animation: dealCard 0.3s ease-out;
-        }
-        @keyframes dealCard {
-            from { transform: scale(0) rotate(180deg); opacity: 0; }
-            to { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        .participant-wrapper {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            transform: translate(-50%, -50%);
-        }
-        .participant-wrapper.top-side {
-            transform: translate(-50%, calc(-50% - 20px));
-        }
-        .participant-wrapper.bottom-side {
-            transform: translate(-50%, calc(-50% + 20px));
-        }
-        .participant-wrapper.left-side {
-            transform: translate(calc(-50% - 16px), -50%);
-        }
-        .participant-wrapper.right-side {
-            transform: translate(calc(-50% + 16px), -50%);
-        }
-        .participant {
-            width: 53px;
-            height: 72px;
-            padding: 3px 2px;
-            border: 1px solid #3a3f3b;
-            border-radius: 6px;
-            background: #242826;
-            text-align: center;
-            box-shadow: 0 1px 3px #00000040;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1px;
-            cursor: pointer;
-        }
-        .participant:hover {
-            transform: scale(1.05);
-            box-shadow: 0 2px 6px #00000040;
-        }
-        .participant.voted {
-            border-color: #6bc676;
-            background: #2a332a;
-        }
-        .participant.vote-modified {
-            border-color: #ff9a6b;
-            background: #3d2a1e;
-        }
-        .participant .avatar {
-            display: grid;
-            place-items: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #3a3f3b;
-            color: #6bc676;
-            font-size: 8px;
-            font-weight: 800;
-        }
-        .participant .vote-value {
-            color: #6bc676;
-            font: 700 12px "DM Mono", monospace;
-            line-height: 1;
-        }
-        .participant .participant-state {
-            display: block;
-            margin-top: 0;
-            color: #8a9488;
-            font-size: 7px;
-            line-height: 1;
-        }
-        .vote-initial {
-            color: #8a9488;
-            text-decoration: line-through;
-            font-size: 10px;
-            position: relative;
-            display: inline-block;
-        }
-        .vote-new {
-            position: relative;
-            font-weight: 700;
-        }
-        .participant-name {
-            font-size: 12px;
-            font-weight: 700;
-            color: #e8e6e0;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .info {
-            margin-top: 30px;
-            font-size: 12px;
-            color: #8a9488;
-            text-align: center;
-            max-width: 600px;
-            line-height: 1.6;
-        }
-        .info code {
-            background: #242826;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-        .result-panel {
-            margin: 0;
-            padding: 0;
-            background: transparent;
-            border-radius: 0;
-            border: none;
-            max-width: none;
-            width: auto;
-        }
-        .result-panel.hidden { display: none; }
-        .stats {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-        .stats .stat {
-            padding: 8px 12px;
-            background: #1a1d1b;
-            text-align: center;
-            border-radius: 6px;
-            width: 100%;
-        }
-        .stats .stat strong {
-            display: block;
-            margin-top: 2px;
-            font: 700 14px "DM Mono", monospace;
-            color: #6bc676;
-        }
-        .stats .stat span {
-            font-size: 7px;
-            color: #8a9488;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .stats .stat.most-voted {
-            background: #1a3a2a;
-            padding: 12px 20px;
-            width: 100%;
-        }
-        .stats .stat.most-voted strong {
-            font-size: 22px;
-            color: #c7ff4d;
-        }
-        .stats .stat.most-voted span {
-            font-size: 8px;
-        }
-        .info-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2px;
-            width: 100%;
-            background: #3a3f3b;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        .info-stats .stat {
-            border-radius: 0;
-            padding: 6px 4px;
-        }
-        .info-stats .stat strong {
-            font-size: 11px;
-        }
-        .info-stats .stat span {
-            font-size: 6px;
-        }
-        .hidden { display: none; }
-        .debug-controls {
-            margin-top: 12px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: center;
-            align-items: center;
-        }
-        .debug-controls label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: #8a9488;
-            cursor: pointer;
-        }
-        .debug-controls input[type="checkbox"] {
-            accent-color: #6bc676;
-            width: 16px;
-            height: 16px;
-        }
-        .guide-line {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            height: 1px;
-            transform-origin: 0 50%;
-            background: #ff785166;
-            pointer-events: none;
-            z-index: 0;
-            transition: background 0.2s;
-        }
-        .edit-mode .guide-line {
-            pointer-events: auto;
-            cursor: pointer;
-            height: 6px;
-            background: #ff7851aa;
-        }
-        .edit-mode .guide-line:hover {
-            background: #ff7851;
-        }
-        .edit-mode .guide-line.dragging {
-            background: #6bc676;
-            height: 8px;
-        }
-        .guide-line-handle {
-            position: absolute;
-            right: -6px;
-            top: -5px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ff7851;
-            cursor: grab;
-            pointer-events: auto;
-            display: none;
-        }
-        .edit-mode .guide-line-handle {
-            display: block;
-        }
-        .guide-line-handle:active {
-            cursor: grabbing;
-        }
-        .angle-label {
-            position: absolute;
-            font-size: 9px;
-            font-weight: 700;
-            color: #ff7851;
-            background: #1a1d1b;
-            padding: 1px 4px;
-            border-radius: 3px;
-            pointer-events: none;
-            z-index: 1;
-            white-space: nowrap;
-        }
-        .participant.overlapping {
-            border-color: #ff7851 !important;
-            box-shadow: 0 0 0 2px #ff785188, 0 1px 3px #00000040 !important;
-        }
-        .overlap-count {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #ff7851;
-            color: #1a1d1b;
-            font-size: 10px;
-            font-weight: 700;
-            display: grid;
-            place-items: center;
-            z-index: 2;
-        }
-        .debug-info {
-            margin-top: 12px;
-            padding: 10px 16px;
-            background: #242826;
-            border-radius: 6px;
-            font-size: 12px;
-            color: #8a9488;
-            max-height: 150px;
-            overflow-y: auto;
-            width: min(700px, 92vw);
-        }
-        .debug-info strong { color: #6bc676; }
-        .debug-info .overlap { color: #ff7851; }
-        .debug-info table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 6px;
-        }
-        .debug-info th, .debug-info td {
-            padding: 2px 8px;
-            text-align: left;
-            border-bottom: 1px solid #3a3f3b;
-            font-size: 11px;
-        }
-        .debug-info th { color: #6bc676; font-weight: 700; }
-        .participant.dragging {
-            cursor: grabbing !important;
-            z-index: 100 !important;
-            box-shadow: 0 0 0 3px #6bc676, 0 2px 8px #00000080 !important;
-        }
-        .edit-mode .participant {
-            cursor: grab !important;
-        }
-        .export-area {
-            margin-top: 12px;
-            width: min(700px, 92vw);
-        }
-        .export-area textarea {
-            width: 100%;
-            height: 200px;
-            background: #1a1d1b;
-            color: #6bc676;
-            border: 1px solid #3a3f3b;
-            border-radius: 6px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 11px;
-            resize: vertical;
-        }
-        .export-area button {
-            margin-top: 6px;
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            background: #3a3f3b;
-            color: #e8e6e0;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .export-area button:hover { background: #4a4f4b; }
     </style>
 </head>
 <body>
-    <h1>🃏 Teste de Reveal de Votos</h1>
-    
-    <div class="table-container">
-        <div class="table-surface" id="table">
-            <div class="table-center" id="table-center">
-                <section id="result-panel" class="result-panel hidden">
-                    <div id="stats" class="stats"></div>
-                </section>
+<main>
+    <h1>Scrum Poker seat layout editor</h1>
+    <p class="intro">Arrange fourteen seats for each monitor width, then preview smaller rooms by randomly choosing distinct seats from that saved layout. Drag the cards to adjust a seat, save the layout, and export the positions when they are ready.</p>
+
+    <section class="control-panel" aria-label="Preview controls">
+        <div class="control">
+            <label for="viewport-width">Monitor width</label>
+            <input id="viewport-width" type="range" min="640" max="2560" step="1" value="1280">
+            <output id="viewport-label" for="viewport-width"></output>
+        </div>
+        <div class="control">
+            <label for="player-count">Players in preview</label>
+            <input id="player-count" type="range" min="1" max="14" step="1" value="8">
+            <output id="player-label" for="player-count"></output>
+        </div>
+        <div class="control">
+            <label>Monitor presets</label>
+            <div class="presets">
+                <button type="button" data-width="768">768</button>
+                <button type="button" data-width="1024">1024</button>
+                <button type="button" data-width="1280">1280</button>
+                <button type="button" data-width="1440">1440</button>
+                <button type="button" data-width="1920">1920</button>
+                <button type="button" data-width="2560">2560</button>
             </div>
         </div>
-    </div>
-
-    <div class="controls">
-        <div class="control-group">
-            <label for="count">Participantes:</label>
-            <input type="range" id="count" min="1" max="20" value="4">
-            <span id="count-display">4</span>
+        <div class="presets">
+            <button type="button" class="primary" id="save-layout">Save this layout</button>
+            <button type="button" class="danger" id="reset-layout">Reset this layout</button>
+            <button type="button" id="shuffle-preview">Shuffle preview seats</button>
         </div>
-        <div class="control-group">
-            <button id="vote-random">🎲 Votos Aleatórios</button>
-            <button id="reveal" class="secondary">👁️ Reveal</button>
-            <button id="reset" class="danger">🔄 Reset</button>
-        </div>
-    </div>
+    </section>
 
-    <div class="debug-controls">
-        <label><input type="checkbox" id="show-guides"> Linhas de guia</label>
-        <label><input type="checkbox" id="show-angles"> Mostrar ângulos</label>
-        <label><input type="checkbox" id="show-overlaps" checked> Detetar sobreposições</label>
-        <label><input type="checkbox" id="show-debug-info"> Tabela de posições</label>
-        <label style="color:#6bc676; font-weight:700;"><input type="checkbox" id="edit-mode"> ✏️ Modo editar</label>
+    <p class="help">Set Players in preview to 14 to see and arrange every seat. Lower counts randomly sample unique seats from the same saved layout. Reveal random votes, force a tied draw (requires at least two players), or show a consensus to preview the result panel and statistics.</p>
+    <div class="stage-scroll">
+        <section class="room-frame" id="room-frame">
+            <header class="room-header"><span>POKER🧄</span><span id="round-label">ROUND 01</span><span class="room-code">ROOM · ABCD</span></header>
+            <div class="round-intro"><h2 id="round-heading">Choose your estimate</h2><p id="round-subtitle">Votes stay private until someone reveals the cards.</p></div>
+            <div class="table-stage" id="table-stage">
+                <div class="table-surface" id="table-surface"><div class="table-center" id="table-center">POKER TABLE</div></div>
+                <div class="seats" id="seats"></div>
+            </div>
+        </section>
     </div>
-    
-    <div class="controls" style="margin-top:8px;">
-        <button id="export-positions" class="secondary">📋 Exportar posições</button>
-        <button id="reset-positions" class="danger">🔄 Reset posições</button>
-    </div>
-    
-    <div class="export-area hidden" id="export-area">
-        <textarea id="export-text" readonly></textarea>
-        <button id="copy-export">📋 Copiar para clipboard</button>
-    </div>
-    
-    <div class="debug-info hidden" id="debug-info"></div>
-    
-    <script>
-        const countInput = document.getElementById('count');
-        const countDisplay = document.getElementById('count-display');
-        const table = document.getElementById('table');
-        
-        const cards = [1, 2, 3, 5, 8, 13, 21, '?'];
-        const names = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Peter', 'Quinn', 'Rose', 'Sam', 'Tina'];
-        
-        let participants = [];
-        let revealed = false;
-        
-        // Debug state
-        const showGuides = document.getElementById('show-guides');
-        const showAngles = document.getElementById('show-angles');
-        const showOverlaps = document.getElementById('show-overlaps');
-        const showDebugInfo = document.getElementById('show-debug-info');
-        const editMode = document.getElementById('edit-mode');
-        const debugInfoEl = document.getElementById('debug-info');
-        
-        // Custom positions storage (when edit mode is used)
-        let customPositions = null; // null means use auto-calculation
-        
-        // Drag state
-        let dragIndex = -1;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-        
-        function initParticipants(count) {
-            participants = [];
-            for (let i = 0; i < count; i++) {
-                participants.push({
-                    name: names[i % names.length],
-                    vote: null,
-                    initialVote: null,
-                    voteChanged: false,
-                    voteChangedRound: 0,
-                    round: 1
-                });
-            }
-            revealed = false;
-            render();
+    <section class="round-controls" aria-label="Round preview controls">
+        <label for="vote-pattern">Vote pattern
+            <select id="vote-pattern">
+                <option value="random">Random votes</option>
+                <option value="draw">Draw (tied votes)</option>
+                <option value="consensus">Consensus</option>
+            </select>
+        </label>
+        <button type="button" class="primary" id="reveal-cards">Reveal cards</button>
+        <button type="button" id="new-round">New round ↻</button>
+    </section>
+    <p class="status" id="layout-status" aria-live="polite"></p>
+
+    <section class="export-panel">
+        <h2>Export positions</h2>
+        <p>The export contains fourteen seat positions for 768, 1024, 1280, 1440, 1920, and 2560px monitor widths, plus any custom widths you save. The room can randomly select the required number of distinct positions for each group.</p>
+        <div class="export-actions">
+            <button type="button" class="primary" id="export-all">Generate complete export</button>
+            <button type="button" id="copy-export">Copy JSON</button>
+            <button type="button" id="download-export">Download JSON</button>
+        </div>
+        <textarea id="export-data" readonly placeholder="Generate the export, then copy or download it and send it back here."></textarea>
+    </section>
+</main>
+
+<script>
+    const MAX_PLAYERS = 14;
+    const MAX_STAGE_WIDTH = 1120;
+    const MONITOR_WIDTHS = [768, 1024, 1280, 1440, 1920, 2560];
+    const STORAGE_KEY = 'scrum-poker-seat-layouts-v2';
+    const viewportInput = document.querySelector('#viewport-width');
+    const playerInput = document.querySelector('#player-count');
+    const stage = document.querySelector('#table-stage');
+    const table = document.querySelector('#table-surface');
+    const seatsEl = document.querySelector('#seats');
+    const statusEl = document.querySelector('#layout-status');
+    const exportEl = document.querySelector('#export-data');
+    const votePatternInput = document.querySelector('#vote-pattern');
+    const tableCenter = document.querySelector('#table-center');
+    let positions = [];
+    let selectedSlots = [];
+    let previewVotes = [];
+    let previewRevealed = false;
+    let previewRound = 1;
+    let currentLayout = null;
+    let currentViewport = null;
+    let currentPlayerCount = null;
+    let dragIndex = -1;
+    let dragDisplayIndex = -1;
+    let dragPointer = null;
+    let savedLayouts = loadSavedLayouts();
+
+    function loadSavedLayouts() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+        catch { return {}; }
+    }
+    function persistSavedLayouts() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedLayouts)); } catch {}
+    }
+    function layoutKey(viewportWidth) { return String(viewportWidth); }
+    function getStageWidth(viewportWidth) { return Math.min(MAX_STAGE_WIDTH, Math.max(240, viewportWidth - 40)); }
+
+    function createAutoLayout(viewportWidth) {
+        const stageWidth = getStageWidth(viewportWidth);
+        const tableWidth = Math.min(700, Math.max(100, stageWidth - 200));
+        const radiusX = Math.min(stageWidth / 2 - 34, tableWidth / 2 + 64);
+        const radiusY = tableWidth / 5 + 78;
+        const samples = 1440;
+        const ring = [];
+        let circumference = 0;
+        for (let i = 0; i <= samples; i++) {
+            const angle = 2 * Math.PI * i / samples;
+            const point = { x: radiusX * Math.cos(angle), y: radiusY * Math.sin(angle) };
+            if (i) circumference += Math.hypot(point.x - ring[i - 1].x, point.y - ring[i - 1].y);
+            ring.push({ ...point, length: circumference });
         }
-        
-        function randomVote() {
-            let votedCount = 0;
-            participants.forEach((p, i) => {
-                // 70% chance de votar
-                if (Math.random() < 0.7) {
-                    const card = cards[Math.floor(Math.random() * cards.length)];
-                    if (!p.vote) {
-                        p.initialVote = card;
-                    }
-                    p.vote = card;
-                    p.round = 1;
-                    votedCount++;
-                }
-            });
-            render();
+
+        const ringCapacity = Math.min(MAX_PLAYERS, Math.max(4, Math.floor(circumference / 140)));
+        const ringCount = ringCapacity;
+        const seatPositions = [];
+        for (let index = 0; index < ringCount; index++) {
+            const target = circumference * index / ringCount;
+            let next = ring.findIndex(point => point.length >= target);
+            if (next < 1) next = 1;
+            const before = ring[next - 1];
+            const after = ring[next];
+            const fraction = (target - before.length) / (after.length - before.length || 1);
+            seatPositions.push({ x: before.x + (after.x - before.x) * fraction, y: before.y + (after.y - before.y) * fraction });
         }
-        
-        function revealVotes() {
-            const voted = participants.filter(p => p.vote);
-            if (voted.length === 0) {
-                return;
-            }
-            revealed = true;
-            renderStats();
-            render();
+        for (let index = 0; index < MAX_PLAYERS - ringCount; index++) {
+            const level = Math.floor(index / 4);
+            const side = index % 4 < 2 ? 1 : -1;
+            const vertical = index % 2 === 0 ? 1 : -1;
+            seatPositions.push({ x: side * radiusX, y: vertical * (radiusY + 40 + level * 110) });
         }
-        
-        function renderStats() {
-            const numericCards = new Set([1, 2, 3, 5, 8, 13, 21]);
-            const votes = participants
-                .filter(p => p.vote && numericCards.has(p.vote))
-                .map(p => p.vote);
-            const values = votes.map(v => Number(v)).sort((a, b) => a - b);
-            const average = values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
-            // Calculate mode (most voted value)
-            const mode = votes.length ? Object.entries(votes.reduce((counts, v) => { counts[v] = (counts[v] || 0) + 1; return counts; }, {})).sort((a,b) => b[1] - a[1])[0][0] : null;
-            const fmt = value => value === null ? "—" : String(value).replace(".5", ",5");
-            // Most voted highlighted in center, other stats below
-            const modeValue = fmt(mode);
-            const infoStats = [
-                ["Average", fmt(average && +average.toFixed(1))],
-                ["Highest", fmt(values.at(-1) ?? null)],
-                ["Lowest", fmt(values[0] ?? null)]
-            ];
-            document.getElementById('stats').innerHTML =
-                `<div class="stat most-voted"><span>MOST VOTED</span><strong>${modeValue}</strong></div>` +
-                `<div class="info-stats">${infoStats.map(([label, value]) =>
-                    `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`
-                ).join("")}</div>`;
-            document.getElementById('result-panel').classList.toggle('hidden', !revealed);
+
+        const outerY = Math.max(radiusY, ...seatPositions.map(position => Math.abs(position.y)));
+        const stageHeight = Math.max(340, outerY * 2 + 96);
+        return {
+            viewportWidth,
+            stageWidth,
+            stageHeight,
+            table: { width: tableWidth, height: tableWidth / 2.5 },
+            positions: seatPositions.map(position => ({ x: stageWidth / 2 + position.x, y: stageHeight / 2 + position.y }))
+        };
+    }
+
+    function getActiveLayout(viewportWidth) {
+        const auto = createAutoLayout(viewportWidth);
+        const saved = savedLayouts[layoutKey(viewportWidth)];
+        if (!saved || saved.positions.length !== MAX_PLAYERS) return { ...auto, isCustom: false };
+        return {
+            ...auto,
+            positions: saved.positions.map(point => ({ x: point.x * auto.stageWidth, y: point.y * auto.stageHeight })),
+            isCustom: true
+        };
+    }
+
+    function chooseSlots(count) {
+        const slots = Array.from({ length: MAX_PLAYERS }, (_, index) => index);
+        for (let index = slots.length - 1; index > 0; index--) {
+            const swap = Math.floor(Math.random() * (index + 1));
+            [slots[index], slots[swap]] = [slots[swap], slots[index]];
         }
-        
-        function resetVotes() {
-            participants.forEach(p => {
-                p.vote = null;
-                p.initialVote = null;
-                p.voteChanged = false;
-                p.voteChangedRound = 0;
-            });
-            revealed = false;
-            // Hide the result panel to clear the table
-            document.getElementById('result-panel').classList.add('hidden');
-            render();
-        }
-        
-        function changeVote(index) {
-            const p = participants[index];
-            
-            // Se já mudou o voto após reveal, bloqueia
-            if (revealed && p.voteChangedRound === p.round) {
-                return;
-            }
-            
-            // Escolhe um voto diferente do atual
-            const availableCards = cards.filter(c => c !== p.vote);
-            const newVote = availableCards[Math.floor(Math.random() * availableCards.length)];
-            
-            if (!p.initialVote) {
-                p.initialVote = p.vote;
-            }
-            
-            // Se já tem voto e estamos após reveal, marca como mudado
-            if (revealed && p.vote && p.vote !== newVote) {
-                p.voteChanged = true;
-                p.voteChangedRound = p.round;
-            }
-            
-            p.vote = newVote;
-            if (revealed) renderStats();
-            render();
-        }
-        
-        function detectOverlaps(positions) {
-            const tableRect = table.getBoundingClientRect();
-            const cardW = 53;
-            const cardH = 72;
-            const overlaps = new Map();
-            
-            for (let i = 0; i < positions.length; i++) {
-                overlaps.set(i, 0);
-                const p1 = positions[i];
-                const x1 = (p1.x / 100) * tableRect.width;
-                const y1 = (p1.y / 100) * tableRect.height;
-                
-                for (let j = i + 1; j < positions.length; j++) {
-                    const p2 = positions[j];
-                    const x2 = (p2.x / 100) * tableRect.width;
-                    const y2 = (p2.y / 100) * tableRect.height;
-                    
-                    const dx = Math.abs(x1 - x2);
-                    const dy = Math.abs(y1 - y2);
-                    
-                    // Se as cartas se sobrepõem ou estão muito próximas (< 5px)
-                    if (dx < cardW && dy < cardH) {
-                        overlaps.set(i, overlaps.get(i) + 1);
-                        overlaps.set(j, overlaps.get(j) + 1);
-                    }
+        return slots.slice(0, count);
+    }
+
+    function getCollisions(layout) {
+        const playerCollisions = new Set();
+        const tableCollisions = new Set();
+        const halfSeatWidth = 38;
+        const halfSeatHeight = 44.5;
+        const tableRX = layout.table.width / 2;
+        const tableRY = layout.table.height / 2;
+        const centerX = layout.stageWidth / 2;
+        const centerY = layout.stageHeight / 2;
+        layout.positions.forEach((point, i) => {
+            const dx = Math.max(Math.abs(point.x - centerX) - halfSeatWidth, 0);
+            const dy = Math.max(Math.abs(point.y - centerY) - halfSeatHeight, 0);
+            if ((dx / tableRX) ** 2 + (dy / tableRY) ** 2 < 1) tableCollisions.add(i);
+            for (let j = 0; j < i; j++) {
+                const other = layout.positions[j];
+                if (Math.abs(point.x - other.x) < halfSeatWidth * 2 && Math.abs(point.y - other.y) < halfSeatHeight * 2) {
+                    playerCollisions.add(i);
+                    playerCollisions.add(j);
                 }
             }
-            return overlaps;
-        }
-        
-        function calculateAutoPositions(count) {
-            const positions = [];
-            // Custom positions for 20 participants (manually adjusted to avoid overlaps)
-            // For fewer participants, select a uniform subset of these positions
-            const fullPositions = [
-                { x: 51.14, y: -15.5 }, { x: 68.92, y: -15.25 }, { x: 84.09, y: -13.1 },
-                { x: 94.78, y: -9.78 }, { x: 103.88, y: 15.9 }, { x: 107.86, y: 51.79 },
-                { x: 105.73, y: 91.25 }, { x: 94.78, y: 111.56 }, { x: 84.09, y: 113.1 },
-                { x: 68.07, y: 118.47 }, { x: 48.86, y: 118.71 }, { x: 32.08, y: 118.11 },
-                { x: 17.48, y: 117.03 }, { x: 5.65, y: 105.49 }, { x: -4.16, y: 86.6 },
-                { x: -6, y: 50 }, { x: -4.02, y: 13.75 }, { x: 6.22, y: -7.63 },
-                { x: 15.91, y: -13.1 }, { x: 33.36, y: -14.9 }
-            ];
-            if (count <= 20) {
-                // Select a uniform subset of the 20 positions, ensuring even distribution
-                const used = new Set();
-                for (let i = 0; i < count; i++) {
-                    const idx = Math.floor((i * 20) / count) % 20;
-                    let attempts = 0;
-                    while (used.has(idx) && attempts < 20) {
-                        idx = (idx + 1) % 20;
-                        attempts++;
-                    }
-                    used.add(idx);
-                    positions.push({ x: fullPositions[idx].x, y: fullPositions[idx].y, angle: Math.round(-90 + (360 / count) * i) });
-                }
-            } else {
-                // Fallback: elliptical positioning for more than 20
-                const marginX = 8;
-                const marginY = 28;
-                const radiusX = 50 + marginX;
-                const radiusY = 50 + marginY;
-                for (let i = 0; i < count; i++) {
-                    const angle = (-90 + (360 / count) * i) * (Math.PI / 180);
-                    const x = 50 + radiusX * Math.cos(angle);
-                    const y = 50 + radiusY * Math.sin(angle);
-                    positions.push({ x, y, angle: Math.round(-90 + (360 / count) * i) });
-                }
-            }
-            return positions;
-        }
-        
-        function render() {
-            const count = participants.length;
-            // Use custom positions if available, otherwise auto-calculate
-            let positions;
-            if (customPositions && customPositions.length === count) {
-                positions = customPositions.map((cp, i) => ({
-                    x: cp.x,
-                    y: cp.y,
-                    angle: Math.round(-90 + (360 / count) * i)
-                }));
-            } else {
-                positions = calculateAutoPositions(count);
-            }
-            
-            // Clear debug elements
-            table.querySelectorAll('.guide-line, .angle-label').forEach(el => el.remove());
-            
-            // Clear participants from table (keep table-center)
-            const existingWrappers = table.querySelectorAll('.participant-wrapper');
-            existingWrappers.forEach(w => w.remove());
-            
-            // Detect overlaps
-            const overlaps = showOverlaps.checked ? detectOverlaps(positions) : new Map();
-            
-            // Draw guide lines
-            if (showGuides.checked) {
-                positions.forEach((pos, i) => {
-                    const lineWrapper = document.createElement('div');
-                    lineWrapper.className = 'guide-line';
-                    lineWrapper.dataset.index = i;
-                    
-                    // Calculate angle and length from center to participant
-                    const dx = pos.x - 50;
-                    const dy = pos.y - 50;
-                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                    const length = Math.sqrt(dx * dx + dy * dy) * (table.offsetWidth / 100);
-                    
-                    lineWrapper.style.width = `${length}px`;
-                    lineWrapper.style.transform = `rotate(${angle}deg)`;
-                    
-                    // Add draggable handle at the end of the line
-                    const handle = document.createElement('div');
-                    handle.className = 'guide-line-handle';
-                    handle.dataset.index = i;
-                    lineWrapper.appendChild(handle);
-                    
-                    // Make handle draggable in edit mode
-                    if (editMode.checked) {
-                        handle.addEventListener('mousedown', (e) => startGuideDrag(e, i));
-                    }
-                    
-                    table.appendChild(lineWrapper);
-                });
-            }
-            
-            // Show angle labels
-            if (showAngles.checked) {
-                positions.forEach((pos, i) => {
-                    const label = document.createElement('div');
-                    label.className = 'angle-label';
-                    label.textContent = `${pos.angle}°`;
-                    label.style.left = `${pos.x}%`;
-                    label.style.top = `${pos.y}%`;
-                    label.style.transform = 'translate(-50%, calc(-50% + 40px))';
-                    table.appendChild(label);
-                });
-            }
-            
-            // Render participants
-            participants.forEach((person, index) => {
-                const pos = positions[index];
-                const angle = (-90 + (360 / count) * index);
-                const normalizedAngle = ((angle % 360) + 360) % 360;
-                let sideClass = "";
-                if (normalizedAngle >= 315 || normalizedAngle < 45) sideClass = "right-side";
-                else if (normalizedAngle >= 45 && normalizedAngle < 135) sideClass = "bottom-side";
-                else if (normalizedAngle >= 135 && normalizedAngle < 225) sideClass = "left-side";
-                else sideClass = "top-side";
-                
-                const initials = person.name.charAt(0);
-                
-                let voteDisplay = '';
-                if (revealed && person.vote) {
-                    if (person.voteChanged) {
-                        voteDisplay = `<span class="vote-value"><span class="vote-initial">${person.initialVote}</span><span class="vote-new">${person.vote}</span></span>`;
-                    } else {
-                        voteDisplay = `<span class="vote-value">${person.vote}</span>`;
-                    }
-                } else if (person.vote) {
-                    voteDisplay = `<span class="participant-state">Voted ✓</span>`;
-                } else {
-                    voteDisplay = `<span class="participant-state">Thinking…</span>`;
-                }
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = `participant-wrapper ${sideClass}`;
-                wrapper.style.left = `${pos.x}%`;
-                wrapper.style.top = `${pos.y}%`;
-                
-                const overlapCount = overlaps.get(index) || 0;
-                const participantClass = `participant ${person.vote ? 'voted' : ''} ${person.voteChanged ? 'vote-modified' : ''} ${overlapCount > 0 ? 'overlapping' : ''}`;
-                
-                let overlapBadge = '';
-                if (overlapCount > 0) {
-                    overlapBadge = `<div class="overlap-count">${overlapCount}</div>`;
-                }
-                
-                wrapper.innerHTML = `
-                    <div class="${participantClass}" style="position:relative;">
-                        <span class="avatar">${initials}</span>
-                        ${voteDisplay}
-                        ${overlapBadge}
-                    </div>
-                    <span class="participant-name">${person.name}</span>
-                `;
-                
-                // In edit mode, enable drag; otherwise, click to change vote
-                const participantEl = wrapper.querySelector('.participant');
-                if (editMode.checked) {
-                    participantEl.addEventListener('mousedown', (e) => startDrag(e, index));
-                } else {
-                    participantEl.addEventListener('click', () => changeVote(index));
-                }
-                table.appendChild(wrapper);
-            });
-            
-            // Toggle edit-mode class on table container
-            const container = table.parentElement;
-            if (editMode.checked) {
-                container.classList.add('edit-mode');
-            } else {
-                container.classList.remove('edit-mode');
-            }
-            
-            // Update debug info table
-            if (showDebugInfo.checked) {
-                debugInfoEl.classList.remove('hidden');
-                const overlapCount = Array.from(overlaps.values()).filter(v => v > 0).length;
-                const modeLabel = customPositions ? '<strong style="color:#ff9a6b;"> (personalizado)</strong>' : ' (auto)';
-                let html = `<strong>Posições:</strong> ${count} participantes${modeLabel} | <strong class="${overlapCount > 0 ? 'overlap' : ''}">${overlapCount} sobreposições</strong>`;
-                html += '<table><tr><th>#</th><th>Nome</th><th>X (%)</th><th>Y (%)</th><th>Sobreposição</th></tr>';
-                participants.forEach((person, i) => {
-                    const pos = positions[i];
-                    const ov = overlaps.get(i) || 0;
-                    html += `<tr><td>${i + 1}</td><td>${person.name}</td><td>${pos.x.toFixed(1)}</td><td>${pos.y.toFixed(1)}</td><td class="${ov > 0 ? 'overlap' : ''}">${ov > 0 ? ov + ' ⚠️' : '✓'}</td></tr>`;
-                });
-                html += '</table>';
-                debugInfoEl.innerHTML = html;
-            } else {
-                debugInfoEl.classList.add('hidden');
-            }
-        }
-        
-        countInput.addEventListener('input', () => {
-            const count = parseInt(countInput.value);
-            countDisplay.textContent = count;
-            initParticipants(count);
         });
-        
-        document.getElementById('vote-random').addEventListener('click', randomVote);
-        document.getElementById('reveal').addEventListener('click', revealVotes);
-        document.getElementById('reset').addEventListener('click', resetVotes);
-        
-        // Debug controls - re-render when toggled
-        [showGuides, showAngles, showOverlaps, showDebugInfo, editMode].forEach(cb => {
-            cb.addEventListener('change', render);
+        return { playerCollisions, tableCollisions };
+    }
+
+    function previewLayout() {
+        return { ...currentLayout, positions: selectedSlots.map(slot => positions[slot]) };
+    }
+
+    function render({ reshuffle = false } = {}) {
+        const viewportWidth = Number(viewportInput.value);
+        const playerCount = Number(playerInput.value);
+        const changed = viewportWidth !== currentViewport || playerCount !== currentPlayerCount;
+        const playerCountChanged = playerCount !== currentPlayerCount;
+        if (!currentLayout || changed) {
+            currentLayout = getActiveLayout(viewportWidth);
+            positions = currentLayout.positions.map(point => ({ ...point }));
+            currentViewport = viewportWidth;
+            currentPlayerCount = playerCount;
+        }
+        if (changed || reshuffle || selectedSlots.length !== playerCount) selectedSlots = chooseSlots(playerCount);
+        const drawOption = votePatternInput.querySelector('[value="draw"]');
+        drawOption.disabled = playerCount < 2;
+        if (drawOption.disabled && votePatternInput.value === 'draw') votePatternInput.value = 'random';
+        if (playerCountChanged && previewRevealed) previewVotes = createPreviewVotes(playerCount, votePatternInput.value) || [];
+
+        document.querySelector('#room-frame').style.width = `${currentLayout.stageWidth + 2}px`;
+        document.querySelector('#viewport-label').textContent = `${viewportWidth}px monitor · ${currentLayout.stageWidth}px room`;
+        document.querySelector('#player-label').textContent = `${playerCount} of 14 players`;
+        document.querySelector('#round-label').textContent = `ROUND ${String(previewRound).padStart(2, '0')}`;
+        stage.style.height = `${currentLayout.stageHeight}px`;
+        table.style.width = `${currentLayout.table.width}px`;
+        table.style.height = `${currentLayout.table.height}px`;
+
+        const collisions = getCollisions(previewLayout());
+        seatsEl.innerHTML = selectedSlots.map((slot, displayIndex) => {
+            const point = positions[slot];
+            const collision = collisions.playerCollisions.has(displayIndex) || collisions.tableCollisions.has(displayIndex);
+            const vote = previewVotes[displayIndex];
+            const voteDisplay = previewRevealed && vote ? `Vote ${vote}` : previewRevealed ? 'No vote' : 'Thinking…';
+            return `<div class="seat ${collision ? 'collision' : ''} ${previewRevealed && vote ? 'has-voted' : ''}" data-seat="${displayIndex}" style="left:${point.x}px;top:${point.y}px">
+                <div class="seat-card" data-drag-seat="${slot}" aria-label="Drag saved seat ${slot + 1}">
+                    <span class="avatar">${slot + 1}</span><span class="state">${voteDisplay}</span>
+                </div><span class="seat-name">Player ${displayIndex + 1}</span>
+            </div>`;
+        }).join('');
+        renderPreviewResults(playerCount);
+        const savedCount = Object.keys(savedLayouts).length;
+        let message = `${playerCount} players · ${viewportWidth}px monitor · ${currentLayout.isCustom ? 'saved 14-seat layout' : 'generated 14-seat layout'} · ${savedCount} monitor layout${savedCount === 1 ? '' : 's'} saved`;
+        const collisionCount = new Set([...collisions.playerCollisions, ...collisions.tableCollisions]).size;
+        if (collisionCount) message += ` · <span class="bad">${collisionCount} seat${collisionCount === 1 ? '' : 's'} overlap</span>`;
+        else message += ' · no overlaps detected';
+        statusEl.innerHTML = message;
+    }
+
+    function createPreviewVotes(count, pattern) {
+        const deck = ['1', '2', '3', '5', '8', '13', '21', '?'];
+        if (pattern === 'consensus') return Array(count).fill('5');
+        if (pattern === 'draw') {
+            if (count < 2) return null;
+            const topCount = Math.floor(count / 2);
+            const votes = [...Array(topCount).fill('3'), ...Array(topCount).fill('5')];
+            if (count % 2) votes.push('8');
+            for (let index = votes.length - 1; index > 0; index--) {
+                const swap = Math.floor(Math.random() * (index + 1));
+                [votes[index], votes[swap]] = [votes[swap], votes[index]];
+            }
+            return votes;
+        }
+        return Array.from({ length: count }, () => deck[Math.floor(Math.random() * deck.length)]);
+    }
+
+    function renderPreviewResults(playerCount) {
+        const heading = document.querySelector('#round-heading');
+        const subtitle = document.querySelector('#round-subtitle');
+        if (!previewRevealed) {
+            tableCenter.classList.remove('revealed');
+            tableCenter.textContent = 'POKER TABLE';
+            heading.textContent = 'Choose your estimate';
+            subtitle.textContent = 'Votes stay private until someone reveals the cards.';
+            return;
+        }
+
+        const numericCards = new Set(['1', '2', '3', '5', '8', '13', '21']);
+        const votes = previewVotes.filter(vote => numericCards.has(vote));
+        const values = votes.map(Number).sort((a, b) => a - b);
+        const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+        const middleIndex = Math.floor(values.length / 2);
+        const median = !values.length ? null : values.length % 2
+            ? values[middleIndex]
+            : (values[middleIndex - 1] + values[middleIndex]) / 2;
+        const counts = votes.reduce((result, vote) => {
+            result[vote] = (result[vote] || 0) + 1;
+            return result;
+        }, {});
+        const mostVotes = Math.max(0, ...Object.values(counts));
+        const leaders = Object.entries(counts)
+            .filter(([, count]) => count === mostVotes && mostVotes > 0)
+            .map(([value]) => value);
+        const isDraw = leaders.length > 1;
+        const fmt = value => value === null ? '—' : String(value).replace('.5', ',5');
+        const featuredLabel = isDraw ? 'TIED VOTES' : 'MOST VOTED';
+        const featuredValue = leaders.length ? leaders.join(' / ') : '—';
+        const infoStats = [
+            ['Average', fmt(average === null ? null : +average.toFixed(1))],
+            ['Median', fmt(median)],
+            ['Highest', fmt(values.at(-1) ?? null)],
+            ['Lowest', fmt(values[0] ?? null)]
+        ];
+        const drawNotice = isDraw ? `<div class="draw-state">Draw · ${leaders.join(' / ')}</div>` : '';
+        tableCenter.classList.add('revealed');
+        tableCenter.innerHTML = `${drawNotice}<div class="preview-stats"><div class="preview-feature"><span>${featuredLabel}</span><strong>${featuredValue}</strong></div><div class="preview-info">${infoStats.map(([label, value]) => `<div class="preview-stat"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div></div>`;
+        heading.textContent = 'The cards are revealed';
+        subtitle.textContent = isDraw
+            ? `Draw · tied estimates ${leaders.join(' / ')}`
+            : `${votes.length} numeric vote${votes.length === 1 ? '' : 's'} · results shown on the table`;
+    }
+
+    function saveCurrentLayout() {
+        savedLayouts[layoutKey(currentLayout.viewportWidth)] = {
+            viewportWidth: currentLayout.viewportWidth,
+            stageWidth: currentLayout.stageWidth,
+            stageHeight: currentLayout.stageHeight,
+            positions: positions.map(point => ({ x: point.x / currentLayout.stageWidth, y: point.y / currentLayout.stageHeight }))
+        };
+        currentLayout.isCustom = true;
+        persistSavedLayouts();
+        render();
+    }
+
+    function resetCurrentLayout() {
+        delete savedLayouts[layoutKey(Number(viewportInput.value))];
+        persistSavedLayouts();
+        currentViewport = null;
+        render();
+    }
+
+    function round(value) { return Math.round(value * 1000) / 1000; }
+    function buildCompleteExport() {
+        const customWidths = Object.values(savedLayouts).map(layout => layout.viewportWidth);
+        const widths = [...new Set([...MONITOR_WIDTHS, ...customWidths])].sort((a, b) => a - b);
+        return {
+            format: 'scrum-poker-seat-layouts',
+            version: 2,
+            generatedAt: new Date().toISOString(),
+            coordinateSystem: 'x/y are percentages of the room stage, with (0,0) at its top-left.',
+            seatCount: MAX_PLAYERS,
+            fewerPlayersPolicy: 'Choose the required number of distinct seat slots uniformly at random, without replacement.',
+            monitorWidths: widths.map(viewportWidth => {
+                const layout = getActiveLayout(viewportWidth);
+                const collisions = getCollisions(layout);
+                return {
+                    viewportWidth,
+                    stageWidth: layout.stageWidth,
+                    stageHeight: layout.stageHeight,
+                    table: {
+                        x: round((layout.stageWidth - layout.table.width) / 2),
+                        y: round((layout.stageHeight - layout.table.height) / 2),
+                        width: round(layout.table.width),
+                        height: round(layout.table.height)
+                    },
+                    custom: layout.isCustom,
+                    overlaps: { players: collisions.playerCollisions.size, table: collisions.tableCollisions.size },
+                    positions: layout.positions.map((point, index) => ({
+                        seat: index + 1,
+                        x: round(point.x / layout.stageWidth * 100),
+                        y: round(point.y / layout.stageHeight * 100)
+                    }))
+                };
+            })
+        };
+    }
+
+    function startDrag(event) {
+        const card = event.target.closest('[data-drag-seat]');
+        if (!card) return;
+        event.preventDefault();
+        dragIndex = Number(card.dataset.dragSeat);
+        dragDisplayIndex = Number(card.closest('[data-seat]').dataset.seat);
+        dragPointer = event.pointerId;
+        card.setPointerCapture(event.pointerId);
+        card.addEventListener('pointermove', moveDrag);
+        card.addEventListener('pointerup', endDrag, { once: true });
+        card.addEventListener('pointercancel', endDrag, { once: true });
+    }
+
+    function moveDrag(event) {
+        if (dragIndex < 0 || event.pointerId !== dragPointer) return;
+        const rect = stage.getBoundingClientRect();
+        positions[dragIndex] = {
+            x: Math.max(38, Math.min(currentLayout.stageWidth - 38, event.clientX - rect.left)),
+            y: Math.max(45, Math.min(currentLayout.stageHeight - 45, event.clientY - rect.top))
+        };
+        const seat = seatsEl.querySelector(`[data-seat="${dragDisplayIndex}"]`);
+        seat.style.left = `${positions[dragIndex].x}px`;
+        seat.style.top = `${positions[dragIndex].y}px`;
+        const collisions = getCollisions(previewLayout());
+        seatsEl.querySelectorAll('.seat').forEach((element, index) => {
+            const overlap = collisions.playerCollisions.has(index) || collisions.tableCollisions.has(index);
+            element.classList.toggle('collision', overlap);
         });
-        
-        // Drag and drop functionality for participants
-        function startDrag(e, index) {
-            if (!editMode.checked) return;
-            e.preventDefault();
-            dragIndex = index;
-            
-            const wrapper = table.querySelectorAll('.participant-wrapper')[index];
-            const rect = table.getBoundingClientRect();
-            dragOffsetX = e.clientX - rect.left - (parseFloat(wrapper.style.left) / 100 * rect.width);
-            dragOffsetY = e.clientY - rect.top - (parseFloat(wrapper.style.top) / 100 * rect.height);
-            
-            // Visual feedback
-            wrapper.querySelector('.participant').classList.add('dragging');
-            
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', stopDrag);
-        }
-        
-        function onDrag(e) {
-            if (dragIndex < 0) return;
-            const rect = table.getBoundingClientRect();
-            const xPercent = ((e.clientX - rect.left - dragOffsetX) / rect.width) * 100;
-            const yPercent = ((e.clientY - rect.top - dragOffsetY) / rect.height) * 100;
-            
-            // Ensure customPositions exists
-            if (!customPositions) {
-                customPositions = calculateAutoPositions(participants.length);
-            }
-            
-            customPositions[dragIndex] = { x: xPercent, y: yPercent };
-            render();
-        }
-        
-        function stopDrag() {
-            if (dragIndex >= 0) {
-                const wrappers = table.querySelectorAll('.participant-wrapper');
-                if (wrappers[dragIndex]) {
-                    wrappers[dragIndex].querySelector('.participant').classList.remove('dragging');
-                }
-            }
-            dragIndex = -1;
-            document.removeEventListener('mousemove', onDrag);
-            document.removeEventListener('mouseup', stopDrag);
-        }
-        
-        // Drag and drop functionality for guide lines
-        let guideDragIndex = -1;
-        
-        function startGuideDrag(e, index) {
-            if (!editMode.checked) return;
-            e.preventDefault();
-            e.stopPropagation();
-            guideDragIndex = index;
-            
-            // Visual feedback
-            const lines = table.querySelectorAll('.guide-line');
-            if (lines[index]) {
-                lines[index].classList.add('dragging');
-            }
-            
-            document.addEventListener('mousemove', onGuideDrag);
-            document.addEventListener('mouseup', stopGuideDrag);
-        }
-        
-        function onGuideDrag(e) {
-            if (guideDragIndex < 0) return;
-            const rect = table.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            // Calculate position relative to table center
-            const dx = e.clientX - centerX;
-            const dy = e.clientY - centerY;
-            
-            // Convert to percentage
-            const xPercent = 50 + (dx / rect.width) * 100;
-            const yPercent = 50 + (dy / rect.height) * 100;
-            
-            // Ensure customPositions exists
-            if (!customPositions) {
-                customPositions = calculateAutoPositions(participants.length);
-            }
-            
-            customPositions[guideDragIndex] = { x: xPercent, y: yPercent };
-            render();
-        }
-        
-        function stopGuideDrag() {
-            if (guideDragIndex >= 0) {
-                const lines = table.querySelectorAll('.guide-line');
-                if (lines[guideDragIndex]) {
-                    lines[guideDragIndex].classList.remove('dragging');
-                }
-            }
-            guideDragIndex = -1;
-            document.removeEventListener('mousemove', onGuideDrag);
-            document.removeEventListener('mouseup', stopGuideDrag);
-        }
-        
-        // Export positions
-        document.getElementById('export-positions').addEventListener('click', () => {
-            const count = participants.length;
-            let positions;
-            if (customPositions && customPositions.length === count) {
-                positions = customPositions;
-            } else {
-                positions = calculateAutoPositions(count);
-            }
-            
-            const exportData = {
-                count: count,
-                positions: positions.map((pos, i) => ({
-                    index: i,
-                    name: participants[i].name,
-                    x: Math.round(pos.x * 100) / 100,
-                    y: Math.round(pos.y * 100) / 100
-                }))
-            };
-            
-            const json = JSON.stringify(exportData, null, 2);
-            const exportArea = document.getElementById('export-area');
-            const exportText = document.getElementById('export-text');
-            exportArea.classList.remove('hidden');
-            exportText.value = json;
-        });
-        
-        // Copy to clipboard
-        document.getElementById('copy-export').addEventListener('click', () => {
-            const exportText = document.getElementById('export-text');
-            exportText.select();
-            navigator.clipboard.writeText(exportText.value).then(() => {
-                const btn = document.getElementById('copy-export');
-                btn.textContent = '✅ Copiado!';
-                setTimeout(() => { btn.textContent = '📋 Copiar para clipboard'; }, 2000);
-            });
-        });
-        
-        // Reset positions to auto-calculate
-        document.getElementById('reset-positions').addEventListener('click', () => {
-            customPositions = null;
-            render();
-        });
-        
-        // Initialize with 4 participants
-        initParticipants(4);
-    </script>
+        const collisionCount = new Set([...collisions.playerCollisions, ...collisions.tableCollisions]).size;
+        statusEl.innerHTML = collisionCount
+            ? `<span class="bad">${collisionCount} seats overlap. Move the highlighted seats clear of each other and the table.</span>`
+            : 'No overlaps detected. Release to save this 14-seat layout.';
+    }
+
+    function endDrag(event) {
+        if (dragIndex < 0 || event.pointerId !== dragPointer) return;
+        event.currentTarget.removeEventListener('pointermove', moveDrag);
+        dragIndex = -1;
+        dragDisplayIndex = -1;
+        dragPointer = null;
+        saveCurrentLayout();
+    }
+
+    viewportInput.addEventListener('input', render);
+    playerInput.addEventListener('input', render);
+    document.querySelectorAll('[data-width]').forEach(button => button.addEventListener('click', () => {
+        viewportInput.value = button.dataset.width;
+        render();
+    }));
+    document.querySelector('#save-layout').addEventListener('click', saveCurrentLayout);
+    document.querySelector('#reset-layout').addEventListener('click', resetCurrentLayout);
+    document.querySelector('#shuffle-preview').addEventListener('click', () => render({ reshuffle: true }));
+    document.querySelector('#reveal-cards').addEventListener('click', () => {
+        previewVotes = createPreviewVotes(Number(playerInput.value), votePatternInput.value) || [];
+        previewRevealed = true;
+        render();
+    });
+    document.querySelector('#new-round').addEventListener('click', () => {
+        previewRound++;
+        previewVotes = [];
+        previewRevealed = false;
+        render();
+    });
+    votePatternInput.addEventListener('change', () => {
+        if (previewRevealed) previewVotes = createPreviewVotes(Number(playerInput.value), votePatternInput.value) || [];
+        render();
+    });
+    seatsEl.addEventListener('pointerdown', startDrag);
+    document.querySelector('#export-all').addEventListener('click', () => {
+        exportEl.value = JSON.stringify(buildCompleteExport(), null, 2);
+    });
+    document.querySelector('#copy-export').addEventListener('click', async () => {
+        if (!exportEl.value) exportEl.value = JSON.stringify(buildCompleteExport(), null, 2);
+        exportEl.select();
+        try { await navigator.clipboard.writeText(exportEl.value); }
+        catch { document.execCommand('copy'); }
+    });
+    document.querySelector('#download-export').addEventListener('click', () => {
+        if (!exportEl.value) exportEl.value = JSON.stringify(buildCompleteExport(), null, 2);
+        const file = new Blob([exportEl.value], { type: 'application/json' });
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'scrum-poker-seat-layouts.json';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+    render();
+</script>
 </body>
 </html>
